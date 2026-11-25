@@ -1,0 +1,2041 @@
+<!-- 도구: ChatGPT & Gemini / 출처: 교재 Modularity, Pattern 장 확장 -->
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>폐관 후의 수장고 · 만져도 되는 도감</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Noto+Sans+KR:wght@400;600&family=Cormorant+Garamond:ital,wght@0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* --------------------------------------------------
+   1. Design Tokens (:root에 색, 글자 크기, 간격, 모서리 값 정의)
+-------------------------------------------------- */
+:root {
+  /* 반응형 12칼럼 그리드 토큰 */
+  --cols: 12;
+  --gutter: 24px;
+  --margin: 16px;
+  --max-width: 1200px;
+
+  /* Color Tokens */
+  --color-bg: #f1eadb;
+  --color-ink: #1d1a16;
+  --color-mut: rgba(29, 26, 22, 0.65);
+  --color-surface-bg: rgba(255, 255, 255, 0.18);
+  --color-border: rgba(29, 26, 22, 0.24);
+  --color-accent: rgba(230, 0, 126, 0.12);
+
+  /* 3 Primary Inks & Overprint Blend Mode */
+  --ink-y: #ffe600;
+  --ink-m: #e6007e;
+  --ink-c: #0072e3;
+  --ink-blend: multiply;
+
+  /* Typography Tokens */
+  --font-serif: 'Noto Serif KR', serif;
+  --font-sans: 'Noto Sans KR', system-ui, sans-serif;
+  --font-display: 'Cormorant Garamond', serif;
+
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-base: 14.5px;
+  --text-lg: 18px;
+  --text-xl: 36px;
+
+  /* 여백 및 모서리 토큰 */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 20px;
+  --radius-full: 50%;
+
+  /* 무대(Stage) 기준 크기 및 중심 좌표 */
+  --S: min(40vh, 32vw, 350px);
+  --cy: 35%;
+
+  /* 시간대별 역광·림라이트·그림자 토큰 */
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-card-featured: 0 8px 30px rgba(0, 0, 0, 0.1);
+  --sil: 0;
+  --rim-solid: 255, 255, 255;
+  --halo: none;
+  --rim-x: 0px;
+  --rim-y: -0.5px;
+  --rim-c: rgba(255, 255, 255, 0.1);
+  --rim-glow: 4px;
+  --rim-glow-c: rgba(255, 255, 255, 0.15);
+  --melt: 0px;
+
+  box-sizing: border-box;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: #15131a;
+    --color-ink: #eee6d6;
+    --color-mut: rgba(238, 230, 214, 0.68);
+    --color-surface-bg: rgba(14, 12, 20, 0.42);
+    --color-border: rgba(238, 230, 214, 0.24);
+    --ink-blend: screen;
+  }
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+html, body {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+body {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--gutter);
+  padding: 0 var(--margin);
+  max-width: var(--max-width);
+  margin: 0 auto;
+}
+
+/* --------------------------------------------------
+   2. Stage: 폐관 후의 수장고 & 바닥 끌림 궤적
+-------------------------------------------------- */
+#st {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  cursor: grab;
+  isolation: isolate;
+  z-index: 2;
+}
+#st:active {
+  cursor: grabbing;
+}
+
+#tracks {
+  position: absolute;
+  left: 50%;
+  top: var(--cy);
+  width: min(92vw, 960px);
+  height: calc(var(--S) * 0.45);
+  margin-left: calc(min(92vw, 960px) * -0.5);
+  margin-top: calc(var(--S) * 0.14);
+  mix-blend-mode: var(--ink-blend);
+  pointer-events: none;
+  overflow: visible;
+  z-index: 1;
+}
+
+.layer {
+  position: absolute;
+  left: 50%;
+  top: var(--cy);
+  width: var(--S);
+  height: var(--S);
+  margin: calc(var(--S) * -0.725) 0 0 calc(var(--S) * -0.5);
+  transform-origin: 50% 72.5%;
+  will-change: transform, opacity, filter;
+  mix-blend-mode: var(--ink-blend);
+  color: var(--color-ink);
+  pointer-events: none;
+}
+
+.layer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  overflow: visible;
+}
+
+/* 림 라이트 + 윤곽 번짐 + 깊이 블러 */
+.layer > svg:not(.cast) {
+  filter: drop-shadow(var(--rim-x) var(--rim-y) 0 var(--rim-c))
+          drop-shadow(0 0 var(--rim-glow) var(--rim-glow-c))
+          blur(calc(var(--melt) + var(--depth-blur, 0px)));
+}
+
+/* 의자 내부 레이어 간 3원색 오버프린트 혼색 */
+.layer > svg:not(.cast) path,
+.layer > svg:not(.cast) polygon,
+.layer > svg:not(.cast) ellipse,
+.layer > svg:not(.cast) rect,
+.layer > svg:not(.cast) circle {
+  mix-blend-mode: var(--ink-blend);
+}
+
+/* 의자 실루엣 투영 그림자 */
+.layer svg.cast {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  opacity: 0;
+  transform-origin: 50% 93%;
+  transform: skewX(var(--cast-skew, 0deg)) scaleY(var(--cast-sy, -0.3));
+  filter: brightness(0) blur(var(--cast-blur, 2px));
+  -webkit-mask-image: linear-gradient(to top, #000 8%, transparent 100%);
+  mask-image: linear-gradient(to top, #000 8%, transparent 100%);
+}
+
+/* 3원색(Yellow / Magenta / Cyan-Blue) 잉크 조형 스타일 토큰 */
+svg .iy { fill: var(--ink-y); fill-rule: evenodd; }
+svg .im { fill: var(--ink-m); fill-rule: evenodd; }
+svg .ic { fill: var(--ink-c); fill-rule: evenodd; }
+svg .iy-soft { fill: var(--ink-y); opacity: 0.48; fill-rule: evenodd; }
+svg .im-soft { fill: var(--ink-m); opacity: 0.42; fill-rule: evenodd; }
+svg .ic-soft { fill: var(--ink-c); opacity: 0.38; fill-rule: evenodd; }
+svg .hi { fill: var(--color-bg); opacity: 0.72; }
+svg .b { fill: none; stroke: var(--color-bg); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+svg .sy { fill: none; stroke: var(--ink-y); stroke-linecap: round; stroke-linejoin: round; }
+svg .sm { fill: none; stroke: var(--ink-m); stroke-linecap: round; stroke-linejoin: round; }
+svg .sc { fill: none; stroke: var(--ink-c); stroke-linecap: round; stroke-linejoin: round; }
+svg .sdy { fill: none; stroke: var(--ink-y); stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 4; opacity: 0.78; }
+svg .sdm { fill: none; stroke: var(--ink-m); stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 4; opacity: 0.68; }
+svg .sdc { fill: none; stroke: var(--ink-c); stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 4; opacity: 0.72; }
+
+/* --------------------------------------------------
+   3. Header & Controls
+-------------------------------------------------- */
+header {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  left: 0;
+  right: 0;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 20px var(--margin);
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gutter);
+  pointer-events: none;
+  z-index: 20;
+}
+header .title-wrap {
+  grid-column: span 7;
+}
+header b {
+  display: block;
+  font: 700 20px var(--font-serif);
+  letter-spacing: -0.01em;
+}
+header i {
+  display: block;
+  margin-top: 2px;
+  font: italic 400 14px var(--font-display);
+  color: var(--color-mut);
+}
+header .controls {
+  grid-column: span 5;
+  justify-self: end;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+button {
+  font: 600 var(--text-xs) var(--font-sans);
+  color: var(--color-ink);
+  background: color-mix(in srgb, var(--color-bg) 72%, transparent);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--color-mut);
+  border-radius: var(--radius-lg);
+  padding: 6px 13px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+}
+button:hover {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+/* --------------------------------------------------
+   4. Right Rail Navigation (연대기 점프 레일)
+-------------------------------------------------- */
+#rail {
+  position: fixed;
+  right: var(--margin);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  z-index: 20;
+}
+#rail button {
+  background: none;
+  backdrop-filter: none;
+  border: 0;
+  padding: 2px 4px;
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font: 500 12px var(--font-display);
+  color: var(--color-mut);
+}
+#rail button:hover {
+  background: transparent;
+  color: var(--color-ink);
+}
+#rail button:after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-ink);
+  transition: transform 0.2s, background 0.2s;
+}
+#rail button.on {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+#rail button.on:after {
+  background: var(--color-ink);
+  transform: scale(1.25);
+}
+
+/* --------------------------------------------------
+   5. Card Module: 만져도 되는 도감 (세밀 해부 묘사 포함)
+-------------------------------------------------- */
+#pn-container {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--margin);
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gutter);
+  pointer-events: none;
+  z-index: 20;
+}
+
+.card-module {
+  grid-column: span 8;
+  width: 100%;
+  min-width: 0;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 7px 16px;
+  background: color-mix(in srgb, rgba(10, 8, 16, 0.88) calc(var(--sil) * 100%), var(--color-surface-bg));
+  color: color-mix(in srgb, rgb(var(--rim-solid)) calc(var(--sil) * 100%), var(--color-ink));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-ink);
+  box-shadow: var(--shadow-card);
+}
+
+.card-module.o {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.card-module > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.card-module .top-meta {
+  grid-column: span 8;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.card-module .k {
+  font: 600 var(--text-xs) var(--font-sans);
+  letter-spacing: 0.16em;
+  color: color-mix(in srgb, rgb(var(--rim-solid)) calc(var(--sil) * 75%), var(--color-mut));
+  text-transform: uppercase;
+}
+
+.pattern-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  background: var(--color-ink);
+  color: var(--color-bg);
+  border-radius: var(--radius-sm);
+  font: 600 var(--text-xs) var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+.card-module .y {
+  grid-column: span 3;
+  font: 500 clamp(30px, 4.2vw, 52px)/1 var(--font-display);
+  margin: 2px 0 4px;
+  letter-spacing: -0.02em;
+}
+
+.card-module .title-block {
+  grid-column: span 5;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.card-module h2 {
+  font: 700 clamp(18px, 2vw, 22px)/1.25 var(--font-serif);
+  margin: 0;
+}
+
+.card-module .en {
+  font: italic 400 14px var(--font-display);
+  color: color-mix(in srgb, rgb(var(--rim-solid)) calc(var(--sil) * 75%), var(--color-mut));
+  margin-top: 2px;
+}
+
+.card-module .l {
+  grid-column: span 8;
+  font: 600 var(--text-base)/1.48 var(--font-serif);
+  margin: 2px 0 0;
+}
+
+.card-module .b {
+  grid-column: span 8;
+  font: 400 var(--text-sm)/1.65 var(--font-sans);
+  color: color-mix(in srgb, rgb(var(--rim-solid)) calc(var(--sil) * 78%), var(--color-mut));
+  margin: 0;
+}
+
+/* 부위별 세밀 해부 도감 (등받이·좌판과 결속·다리와 접지) */
+.card-module .anatomy {
+  grid-column: span 8;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 2px 0;
+}
+.card-module .anatomy .part {
+  padding: 6px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 48%, transparent);
+  font: 400 11.5px/1.48 var(--font-sans);
+}
+.card-module .anatomy .part strong {
+  display: block;
+  font: 700 10.5px var(--font-sans);
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+  opacity: 0.85;
+}
+
+.card-module .vs {
+  grid-column: span 8;
+  font: 400 12px/1.55 var(--font-sans);
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-ink) 7%, transparent);
+  border-left: 2px solid var(--color-mut);
+}
+
+.card-module .m {
+  grid-column: span 8;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-xs);
+  font: 600 var(--text-xs) var(--font-sans);
+  letter-spacing: 0.04em;
+}
+
+.card-module .m span::before {
+  content: "# ";
+  opacity: 0.55;
+}
+
+/* 17번째 현대 개개인의 의자: 실시간 자세 조율 바 */
+.card-module .tuner-box {
+  grid-column: span 8;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--color-border);
+  background: color-mix(in srgb, var(--color-ink) 4%, transparent);
+  font: 600 var(--text-xs) var(--font-sans);
+}
+.card-module .tuner-box label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.card-module .tuner-box input[type="range"] {
+  width: 84px;
+  accent-color: var(--color-ink);
+  cursor: pointer;
+}
+.card-module .tuner-box button {
+  padding: 3px 9px;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+header b, header i, .card-module .y, .card-module h2 {
+  text-shadow: var(--halo);
+}
+
+#bloom, #shaft {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+#bloom { z-index: 0; }
+#shaft { z-index: 5; }
+
+#hint {
+  position: fixed;
+  left: 50%;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  font: 400 var(--text-xs) var(--font-sans);
+  color: var(--color-mut);
+  white-space: nowrap;
+  transition: opacity 0.6s;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#grid-overlay {
+  position: fixed;
+  inset: 0;
+  margin: 0 auto;
+  max-width: var(--max-width);
+  padding: 0 var(--margin);
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  gap: var(--gutter);
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#grid-overlay.active { opacity: 1; }
+#grid-overlay div {
+  background: var(--color-accent);
+  border-left: 1px solid rgba(230, 0, 126, 0.2);
+  border-right: 1px solid rgba(230, 0, 126, 0.2);
+  height: 100%;
+}
+#grid-btn {
+  position: fixed;
+  right: var(--margin);
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 1000;
+}
+
+/* --------------------------------------------------
+   6. Responsive Breakpoints (1023px / 767px)
+-------------------------------------------------- */
+@media (max-width: 1023px) {
+  :root {
+    --cols: 8;
+    --S: min(35vh, 38vw, 290px);
+    --cy: 33%;
+  }
+  header .title-wrap { grid-column: span 5; }
+  header .controls { grid-column: span 3; }
+  .card-module {
+    grid-column: span 8;
+    max-height: min(46vh, 380px);
+  }
+}
+
+@media (max-width: 767px) {
+  :root {
+    --cols: 4;
+    --gutter: 14px;
+    --margin: 16px;
+    --S: min(30svh, 66vw, 250px);
+    --cy: 50%;
+  }
+
+  html, body {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 100svh;
+    padding: 0 var(--margin);
+  }
+
+  header {
+    position: relative;
+    inset: auto;
+    order: 1;
+    width: 100%;
+    padding: 14px 0 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  header b { font-size: 18px; }
+  header i { font-size: 12.5px; }
+
+  #st {
+    position: relative;
+    inset: auto;
+    order: 2;
+    width: 100%;
+    height: clamp(240px, 35svh, 330px);
+    min-height: 240px;
+    overflow: visible;
+  }
+
+  .layer {
+    top: 50%;
+    margin: calc(var(--S) * -0.5) 0 0 calc(var(--S) * -0.5);
+    transform-origin: 50% 50%;
+  }
+
+  #tracks {
+    top: 50%;
+    margin-top: calc(var(--S) * 0.34);
+  }
+
+  #pn-container {
+    position: relative;
+    inset: auto;
+    order: 3;
+    display: block;
+    width: 100%;
+    padding: 0 0 12px;
+  }
+
+  .card-module {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-height: none;
+    overflow: visible;
+    padding: 16px;
+  }
+
+  .card-module .anatomy {
+    grid-template-columns: 1fr;
+  }
+
+  #rail {
+    position: relative;
+    inset: auto;
+    order: 4;
+    transform: none;
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    margin: 8px 0 16px;
+  }
+  #rail button {
+    padding: 5px;
+    min-width: 18px;
+    justify-content: center;
+  }
+  #rail button span { display: none; }
+
+  #hint {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    order: 5;
+    transform: none;
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto 72px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.6;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="grid-overlay">
+  <div></div><div></div><div></div><div></div>
+  <div></div><div></div><div></div><div></div>
+  <div></div><div></div><div></div><div></div>
+</div>
+<button id="grid-btn">가이드</button>
+
+<div id="st">
+  <svg id="tracks" viewBox="-480 -30 960 120" aria-hidden="true"></svg>
+</div>
+
+<header>
+  <div class="title-wrap">
+    <b>폐관 후의 수장고 · 만져도 되는 도감</b>
+    <i>After-Hours Vault — 17 Impossible Neighbors in One Room</i>
+  </div>
+  <div class="controls">
+    <button id="light-btn" title="수장고 창밖 시각 전환">조명: 현재시각</button>
+    <button id="snd">소리 켜짐</button>
+  </div>
+</header>
+
+<nav id="rail"></nav>
+
+<div id="pn-container">
+  <section id="pn" class="card-module"></section>
+</div>
+
+<div id="hint">위아래 스크롤·드래그: 의자 사이 걸어들어가기 &nbsp;/&nbsp; 좌우로 밀기: 바닥에 끌며 자국 남기기</div>
+
+<script>
+/* --------------------------------------------------
+   3원색(CMY) 오버프린트 SVG 패턴 및 드로잉 유틸리티 정의
+-------------------------------------------------- */
+document.body.insertAdjacentHTML('afterbegin', `
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- 금박·상형문자 3원색 세선 해칭 -->
+    <pattern id="hv" width="6" height="6" patternUnits="userSpaceOnUse">
+      <path stroke="#FFE600" stroke-width="1.3" d="M0 6L6 0M-1 1L1 -1M5 7L7 5"/>
+      <path stroke="#E6007E" stroke-width="0.9" d="M0 0L6 6"/>
+    </pattern>
+    <!-- 등나무 케인(Cane) 8각 이중 직조 패턴 -->
+    <pattern id="hc" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path stroke="#FFE600" stroke-width="1.2" d="M0 0l8 8M8 0L0 8"/>
+      <path stroke="#E6007E" stroke-width="0.85" d="M4 0v8M0 4h8"/>
+    </pattern>
+    <!-- 궁정 태피스트리·다마스크 자카드 도트 패턴 -->
+    <pattern id="hd" width="7" height="7" patternUnits="userSpaceOnUse">
+      <circle fill="#E6007E" cx="2.5" cy="2.5" r="1.2"/>
+      <circle fill="#0072E3" cx="5.8" cy="5.8" r="1.0"/>
+    </pattern>
+    <!-- 덴마크 종이끈(Paper Cord) 엔벨로프 직조 패턴 -->
+    <pattern id="hp" width="10" height="6" patternUnits="userSpaceOnUse">
+      <path stroke="#FFE600" stroke-width="1.6" d="M0 2h10"/>
+      <path stroke="#0072E3" stroke-width="0.8" opacity="0.65" d="M0 5h10"/>
+    </pattern>
+    <!-- 적층 합판·나뭇결 등고선 패턴 -->
+    <pattern id="hg" width="12" height="8" patternUnits="userSpaceOnUse">
+      <path fill="none" stroke="#E6007E" stroke-width="0.85" opacity="0.55" d="M0 4Q6 1 12 4"/>
+      <path fill="none" stroke="#0072E3" stroke-width="0.65" opacity="0.4" d="M0 7Q6 4 12 7"/>
+    </pattern>
+    <!-- 현대 엘라스토머 메쉬(Elasto-Mesh) 통기 직조 패턴 -->
+    <pattern id="hm" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle fill="#0072E3" cx="1.8" cy="1.8" r="0.95" opacity="0.72"/>
+      <circle fill="#E6007E" cx="4.2" cy="4.2" r="0.8" opacity="0.55"/>
+    </pattern>
+  </defs>
+</svg>`);
+
+/* 3원색 오버프린트 헬퍼 함수 */
+const Iy  = d => `<path class="iy" d="${d}"/>`;
+const Im  = d => `<path class="im" d="${d}"/>`;
+const Ic  = d => `<path class="ic" d="${d}"/>`;
+const Iys = d => `<path class="iy-soft" d="${d}"/>`;
+const Ims = d => `<path class="im-soft" d="${d}"/>`;
+const Ics = d => `<path class="ic-soft" d="${d}"/>`;
+const Hid = d => `<path class="hi" d="${d}"/>`;
+const Bd  = d => `<path class="b" d="${d}"/>`;
+const Sy  = (w, d) => `<path class="sy" stroke-width="${w}" d="${d}"/>`;
+const Sm  = (w, d) => `<path class="sm" stroke-width="${w}" d="${d}"/>`;
+const Sc  = (w, d) => `<path class="sc" stroke-width="${w}" d="${d}"/>`;
+const SDy = (w, d) => `<path class="sdy" stroke-width="${w}" d="${d}"/>`;
+const SDm = (w, d) => `<path class="sdm" stroke-width="${w}" d="${d}"/>`;
+const SDc = (w, d) => `<path class="sdc" stroke-width="${w}" d="${d}"/>`;
+
+/* --------------------------------------------------
+   17개 의자 초정밀 개별 조형 (3원색 CMY 오버프린트 · 부품·결속·질감 세밀 묘사)
+   모든 다리/바퀴는 바닥선 y ≈ 372~376에 안착
+-------------------------------------------------- */
+const C = [
+  /* 0. 사자 다리 왕좌 (BC 1330경) - 금박 등받이 부조, 상형문자 카르투슈, 우라에우스 팔걸이, 사자 발톱과 받침 원통 */
+  Iy('M138 34L276 48L254 196L122 178Z') +
+  Ims('M146 42L268 54L248 188L130 172Z') +
+  '<polygon points="150,48 260,60 242,182 136,168" fill="url(#hv)"/>' +
+  /* 등받이 상단 날개 태양 원반(Winged Sun Disc) & 코니스 몰딩 */
+  Ic('M156 54Q204 42 252 64Q204 68 156 54Z') +
+  '<circle class="im" cx="204" cy="57" r="7.5"/><circle class="iy" cx="204" cy="57" r="3.5"/>' +
+  /* 등받이 중앙 의식 부조 & 양옆 상형문자 카르투슈 기둥 */
+  Im('M174 114Q198 92 226 118Q198 130 174 114Z') +
+  Ic('M186 88Q202 82 216 92L212 146H182Z') +
+  '<circle class="iy" cx="200" cy="83" r="10"/>' +
+  Bd('M152 52L258 63M140 164L240 178M156 64V162M248 72V172') +
+  /* 날개 달린 뱀(우라에우스) 투각 팔걸이 & 사자 갈기 주름 */
+  Iy('M92 144Q116 132 148 144L142 184L90 176Z') +
+  Im('M96 150Q118 142 142 152L138 178L94 170Z') +
+  Iy('M236 156Q268 148 296 160L288 198L232 190Z') +
+  Im('M240 162Q266 156 290 166L284 192L236 184Z') +
+  Bd('M102 156Q122 150 140 156M100 165Q120 160 138 165M244 168Q266 162 286 170M242 177Q264 172 284 179') +
+  /* 좌판 상아·흑단 상감 프리즈 & 방석 단면 */
+  Iy('M88 176L238 194L296 176L294 214L236 236L86 214Z') +
+  Ic('M90 186L238 204L294 186L293 200L238 218L89 200Z') +
+  Bd('M94 190L234 208L290 190M94 204L234 222L288 204') +
+  /* 뒤쪽 사자 다리 (음영 오버프린트) */
+  Ic('M266 220L274 342Q284 348 282 362L252 362Q252 348 258 342L250 226Z') +
+  Im('M128 218L134 334L114 334L110 216Z') +
+  /* 앞쪽 사자 다리 근육, 5개 발톱, 원통 받침대 */
+  Iy('M92 214L118 218L114 340Q128 348 126 368L80 368Q78 348 92 340Z') +
+  Ims('M96 220L114 223L110 340Q122 347 120 366L84 366Q82 347 96 340Z') +
+  Iy('M222 234L250 230L246 346Q260 354 258 371L212 371Q210 354 224 346Z') +
+  Ims('M226 238L246 235L242 346Q254 353 252 369L216 369Q214 353 226 346Z') +
+  Ic('M78 367H128V373H78ZM210 370H260V376H210Z') +
+  Bd('M89 367V355M98 367V353M108 367V353M117 367V355M221 370V358M230 370V356M240 370V356M249 370V358') +
+  /* 다리 하부 세마-타위(Sema-tawy) 결속 가로대 */
+  Sy(4.5, 'M116 326L222 336') +
+  Sm(2.2, 'M130 318L222 328') +
+  Sc(2.2, 'M168 310V332'),
+
+  /* 1. 클리스모스 (BC 5세기) - 반달형 등받이 판, 장부 촉 이음, 8각 케인 좌판, 4개의 칼날 사브르 다리 */
+  Iy('M134 52Q218 42 294 74L284 114Q214 84 128 94Z') +
+  Ims('M138 58Q216 48 288 78L280 108Q214 80 132 90Z') +
+  Bd('M140 66Q216 58 284 84M136 82Q214 72 280 98') +
+  /* 등받이 판을 관통하는 장부 촉(Tenon) 표시 */
+  Ic('M158 62L166 63L164 76L156 75ZM256 74L264 76L261 89L253 87Z') +
+  /* 좌판 뒤쪽에서 등받이까지 이어지는 연속 S자 기둥 */
+  Iy('M248 96L266 102L242 212Q272 288 312 364L290 370Q250 296 226 224Z') +
+  Ic('M254 100L264 104L240 212Q268 286 306 364L296 367Q256 294 232 222Z') +
+  Iy('M152 88L172 90L156 218Q126 296 86 372L108 376Q148 302 174 228Z') +
+  Ic('M158 90L168 92L152 218Q122 294 92 372L102 374Q142 300 168 226Z') +
+  /* 사다리꼴 좌판 프레임 & 등나무 케인 직조 */
+  Im('M148 212L252 204L292 222L186 234Z') +
+  '<polygon points="158,215 248,208 280,221 188,230" fill="url(#hc)"/>' +
+  Bd('M158 215L248 208L280 221L188 230Z') +
+  /* 앞쪽 사브르 다리 능선과 면 분할 */
+  Ic('M186 232Q164 298 134 362L150 365Q178 302 198 232Z') +
+  Sm(1.6, 'M192 233Q170 298 142 363') +
+  Ic('M268 222Q292 284 324 352L308 356Q278 292 256 224Z') +
+  Sm(1.6, 'M262 223Q284 286 315 354'),
+
+  /* 2. 세라 쿠룰리스 (BC 1세기) - 안장 가죽 좌판, 양끝 볼스터 술 장식, S곡선 상아 X다리, 청동 로제트 축 */
+  /* 뒤쪽 교차 상아 다리 */
+  Ic('M136 212Q210 278 298 356L282 362Q200 288 122 220Z') +
+  Ic('M286 206Q216 276 136 356L152 362Q228 286 300 214Z') +
+  /* 처진 가죽 안장 좌판 & 양끝 둥근 볼스터 롤 */
+  Im('M96 206Q184 226 276 204L308 218Q210 244 118 224Z') +
+  '<path d="M106 211Q184 229 272 209L296 218Q210 240 122 222Z" fill="url(#hd)"/>' +
+  Iy('M92 204Q104 202 122 222Q106 228 92 216Z') +
+  Iy('M274 202Q292 204 310 218Q294 226 276 216Z') +
+  Bd('M108 218Q186 236 276 215M114 224Q186 240 282 220') +
+  /* 앞쪽 S곡선 교차 상아 다리 */
+  Iy('M96 214Q178 292 264 372L244 376Q164 298 84 222Z') +
+  Ims('M92 216Q172 294 256 373L248 375Q168 296 88 219Z') +
+  Iy('M268 220Q188 294 102 374L122 376Q204 300 284 226Z') +
+  Ims('M272 222Q192 296 110 375L118 375Q198 298 278 224Z') +
+  /* 교차점 청동 로제트 축 & 다리 하부 보강봉·청동 발굽 */
+  '<circle class="ic" cx="184" cy="296" r="10"/><circle class="im" cx="184" cy="296" r="5.5"/><circle class="iy" cx="184" cy="296" r="2.5"/>' +
+  Sc(3, 'M132 342H236') +
+  Ic('M86 369h28v7H86zM240 369h28v7h-28z'),
+
+  /* 3. 권의 Quanyi (16–17세기) - 5단 연귀맞춤 말굽 등받이, 여의두문 투각 S등판, 구름무늬 보강재, 단차 보강대 */
+  /* 말굽형 둥근 등받이 & 외반 손잡이 */
+  Sy(12, 'M274 152Q284 74 202 68Q118 64 114 148Q112 178 88 184') +
+  Sm(4.5, 'M274 152Q284 74 202 68Q118 64 114 148Q112 178 88 184') +
+  Sy(12, 'M274 152Q272 180 296 184') +
+  Sm(4.5, 'M274 152Q272 180 296 184') +
+  /* 5단 연귀맞춤(Scarf Joint) 이음선 표시 */
+  Bd('M152 72L158 82M246 74L240 84M114 128L124 132M272 130L262 134') +
+  /* S자 곡선 중앙 등판 & 여의두문 투각 메달리온 */
+  Iy('M186 72Q206 132 192 198L222 198Q234 132 214 72Z') +
+  '<path d="M188 74Q208 132 194 196L220 196Q232 132 212 74Z" fill="url(#hg)"/>' +
+  '<ellipse class="im" cx="206" cy="118" rx="12" ry="18"/><ellipse class="b" cx="206" cy="118" rx="8" ry="13"/>' +
+  /* 측면 S자 보조 기둥 & 구름무늬 보강재(Spandrels) */
+  Sy(6.5, 'M134 144Q142 174 138 198M256 146Q248 174 252 198') +
+  Ic('M120 198Q134 186 146 198ZM242 204Q254 192 266 202Z') +
+  /* 뒤쪽 다리 */
+  Ic('M258 212L264 354H248L244 214Z') +
+  Ic('M138 208L142 346H128L124 208Z') +
+  /* 연귀맞춤 사각 좌판 & 안쪽 빙판 몰딩 */
+  Iy('M104 196L242 204L284 190L284 212L242 226L104 218Z') +
+  Im('M112 200L240 207L276 195L276 206L240 218L112 211Z') +
+  Bd('M112 206L240 214L278 200M116 198L124 204M236 206L244 201') +
+  /* 앞다리 & 앞뒤 높이가 다른 4단 관통 장부 보강대(Step Stretchers) */
+  Iy('M108 218H126L122 372H104Z') +
+  Im('M112 218H122L118 372H108Z') +
+  Iy('M232 225H250L246 375H228Z') +
+  Im('M236 225H246L242 375H232Z') +
+  Sy(8, 'M118 334L236 340') +
+  Sm(3.5, 'M118 334L236 340') +
+  Sc(5, 'M122 254L234 260M246 310L262 302M124 294L140 288'),
+
+  /* 4. 교의 Gyoui (14–19세기) - 옻칠 말굽 등받이, 투각 칠보문 등판, 황동 감잡이·두석 장석, 접이식 족좌대 */
+  Sm(11, 'M268 142Q276 68 198 62Q120 58 116 138Q114 166 92 172') +
+  Sy(4, 'M268 142Q276 68 198 62Q120 58 116 138Q114 166 92 172') +
+  Sm(11, 'M268 142Q266 168 288 174') +
+  /* 중앙 등판 칠보문 투각 패널 */
+  Im('M182 66L212 66L206 184L176 184Z') +
+  Iy('M186 76L208 76L203 174L181 174Z') +
+  Bd('M194 84V164M186 112H202M186 140H202') +
+  '<circle class="ic" cx="194" cy="126" r="8"/><circle class="b" cx="194" cy="126" r="4"/>' +
+  /* 비단 방석 좌판 & 가장자리 징 */
+  Im('M106 184L244 190L280 178L276 202L240 214L104 206Z') +
+  '<polygon points="114,188 242,193 272,183 240,206 112,200" fill="url(#hd)"/>' +
+  /* X자 교차 다리 & 황동 경첩·감잡이 장석 */
+  Ic('M140 206L268 356H252L126 206Z') +
+  Ic('M272 198L148 354H132L256 198Z') +
+  Im('M110 206L242 372H222L94 206Z') +
+  Im('M244 212L116 372H96L224 212Z') +
+  /* 교차점 황동 원형 두석 & 모서리 감잡이 */
+  '<circle class="iy" cx="168" cy="288" r="9"/><circle class="b" cx="168" cy="288" r="4"/>' +
+  Iy('M96 206H114V216H96ZM224 212H244V222H224ZM156 276H180V300H156Z') +
+  /* 하부 접이식 족좌대(발받침) */
+  Iy('M88 362L246 366L268 354L268 366L246 376L88 374Z') +
+  Sc(2.5, 'M92 368L244 372'),
+
+  /* 5. 윈저 체어 (1720경) - 증기 곡목 보우 백, 부채꼴 9개 살대, 투각 항아리 스플랫, 안장형 통판 좌판, H자 선반 다리 */
+  Sy(9, 'M122 198Q112 52 204 44Q292 48 272 192') +
+  Sm(3.5, 'M122 198Q112 52 204 44Q292 48 272 192') +
+  /* 9개 물푸레나무 살대 & 중앙 투각 스플랫 */
+  Sc(2.8, 'M136 196L134 114M150 198L148 84M166 200L168 62M184 202L188 50M220 200L224 54M236 198L242 70M252 196L258 96M264 194L270 128') +
+  Iy('M194 48Q204 46 212 48L216 112Q222 136 210 154L214 202H192L196 154Q184 136 190 112Z') +
+  '<ellipse class="b" cx="203" cy="96" rx="4" ry="12"/><ellipse class="b" cx="203" cy="134" rx="5" ry="9"/>' +
+  /* 엉덩이 모양으로 깊게 파낸 느릅나무 통판 좌판(Saddle Seat) 등고선 */
+  Iy('M98 198Q174 188 256 196L286 184Q292 202 276 212L248 224Q168 232 96 218Q88 208 98 198Z') +
+  Ims('M108 202Q174 194 248 200L272 190Q276 202 264 208L242 216Q168 222 106 212Z') +
+  Bd('M114 206Q174 214 244 208M126 201Q174 207 232 202') +
+  /* 선반 가공(Turned) 발루스터 다리 & H형(Cowhorn) 보강 가로대 */
+  Ic('M262 212L286 356H272L248 216Z') +
+  Ic('M132 218L114 352H100L118 218Z') +
+  Iy('M114 220L130 222L104 374H88Z') +
+  Im('M116 254H126M110 318H120') +
+  Iy('M232 222L248 220L270 375H254Z') +
+  Im('M236 256H246M246 320H256') +
+  Sm(5.5, 'M116 294L258 296M186 295L268 286M110 288L186 295'),
+
+  /* 6. 루이 14세 팔걸이의자 (17세기) - 태피스트리 고블랭 등받이, 황동 징, 아칸서스 소용돌이 팔걸이, X자 살티어 보강대 */
+  Iy('M134 26L266 36L254 186L122 174Z') +
+  Im('M140 32L260 42L248 180L128 168Z') +
+  '<polygon points="146,40 252,48 242,172 136,162" fill="url(#hd)"/>' +
+  Bd('M146 40L252 48L242 172L136 162Z') +
+  /* 황동 징(Nailhead) 점선 테두리 */
+  SDy(2, 'M142 36L256 45L246 176L132 166Z') +
+  /* 아칸서스 소용돌이 팔걸이 */
+  Iy('M92 142Q116 126 144 138L140 154Q116 146 98 156L106 194H90Z') +
+  Im('M96 146Q116 134 140 144L138 152Q116 144 98 152Z') +
+  Iy('M236 150Q266 138 294 152L286 198H272L276 164Q258 156 234 164Z') +
+  /* 두툼한 쿠션 좌판 & 금실 프린지(술) 트림 */
+  Im('M88 188L244 202L292 184L290 218L242 238L86 222Z') +
+  Iy('M90 208L242 222L288 204L288 216L242 234L88 220Z') +
+  SDc(2.2, 'M92 214L242 228L286 210') +
+  /* 뒤쪽 다리 */
+  Ic('M268 220L272 356H254L250 226Z') +
+  Ic('M128 222L132 348H116L112 222Z') +
+  /* 앞쪽 역피라미드형 발루스터 다리 & X자 살티어(Saltire) 곡선 보강대·중앙 핀이얼 */
+  Iy('M92 222H116L112 268Q122 284 112 302L114 374H92L94 302Q84 284 94 268Z') +
+  Ims('M96 226H112L108 268Q116 284 108 302L110 370H96L98 302Q90 284 98 268Z') +
+  Iy('M228 236H252L248 280Q258 296 248 314L250 376H228L230 314Q220 296 230 280Z') +
+  Ims('M232 240H248L244 280Q252 296 244 314L246 372H232L234 314Q226 296 234 280Z') +
+  Sm(7, 'M104 334Q184 316 262 326M124 322Q184 328 240 338') +
+  Iy('M176 312Q184 298 192 312L188 332H180Z'),
+
+  /* 7. 토네트 No.14 (1859) - 이중 증기 곡목 아치 루프, 노출 철제 볼트 체결점, 8각 케인 원형 좌판, 원형 링 보강대 */
+  Sy(10.5, 'M118 358Q126 194 146 96Q162 36 212 38Q262 40 264 104Q264 198 278 356') +
+  Sm(4, 'M118 358Q126 194 146 96Q162 36 212 38Q262 40 264 104Q264 198 278 356') +
+  /* 내부 곡목 아치 루프 */
+  Sc(8, 'M162 198Q168 74 208 74Q246 74 242 198') +
+  Sy(3, 'M162 198Q168 74 208 74Q246 74 242 198') +
+  /* 원형 너도밤나무 좌판 & 8각 등나무 케인 편직 */
+  '<ellipse class="iy" cx="196" cy="208" rx="84" ry="18"/>' +
+  '<ellipse class="im-soft" cx="196" cy="210" rx="82" ry="16"/>' +
+  '<ellipse cx="196" cy="207" rx="74" ry="13" fill="url(#hc)"/>' +
+  '<ellipse class="b" cx="196" cy="207" rx="74" ry="13"/>' +
+  /* 좌판 측면 노출 볼트 헤드 4개소 */
+  '<circle class="ic" cx="136" cy="212" r="3.2"/><circle class="ic" cx="252" cy="212" r="3.2"/>' +
+  /* 앞다리 & 원형 링 보강대(Circular Leg Ring) */
+  Sy(10, 'M132 216Q122 292 110 374') +
+  Sm(3.5, 'M132 216Q122 292 110 374') +
+  Sy(10, 'M244 218Q252 294 260 376') +
+  Sm(3.5, 'M244 218Q252 294 260 376') +
+  '<ellipse class="sc" stroke-width="6.5" cx="194" cy="288" rx="66" ry="12"/>' +
+  '<ellipse class="sy" stroke-width="2.2" cx="194" cy="288" rx="66" ry="12"/>',
+
+  /* 8. 힐하우스 래더백 (1902) - 141cm 수직 기둥, 최상단 4단 체크 격자, 7단 수평 가로살, 사다리꼴 방석 */
+  Sc(4, 'M222 10V200') +
+  Ic('M152 4H163V375H152Z') +
+  Im('M155 4H160V375H155Z') +
+  Ic('M246 8H257V376H246Z') +
+  Im('M249 8H254V376H249Z') +
+  /* 최상단 4단 체크 격자(Square Lattice Grid) */
+  Im('M163 14H246V20H163ZM163 28H246V34H163ZM163 42H246V48H163ZM163 56H246V62H163Z') +
+  Sy(3, 'M184 14V62M205 14V62M226 14V62') +
+  /* 리듬감 있는 7단 수평 가로살 */
+  Im('M163 82H246V88H163ZM163 104H246V110H163ZM163 126H246V132H163ZM163 148H246V154H163ZM163 170H246V176H163ZM163 190H246V196H163Z') +
+  /* 사다리꼴 좌판 & 격자 자카드 쿠션 */
+  Iy('M124 202L246 196L278 208L152 222Z') +
+  '<polygon points="132,204 244,199 270,208 154,219" fill="url(#hd)"/>' +
+  Ic('M124 202L152 222V234L124 214Z') +
+  Im('M152 222L278 208V220L152 234Z') +
+  Ics('M266 220H276V364H266Z') +
+  Ic('M124 214H135V374H124Z') +
+  Sm(5, 'M135 338L246 330M152 346L266 338M135 282L246 276'),
+
+  /* 9. 레드 블루 체어 (1918) - 붉은 등판, 푸른 좌판, 검은 규격 각재 직교 조인트(숨은 목심 점선) & 12개 노란 끝단면 */
+  Ics('M232 118H246V358H232Z') +
+  Sc(12, 'M138 144L252 132') +
+  /* 붉은 등판 보드 (Red Backrest) */
+  Im('M148 36L242 46L214 216L122 204Z') +
+  Iys('M152 40L238 49L211 212L126 201Z') +
+  Bd('M154 44L234 52L208 206L130 196Z') +
+  /* 푸른 좌판 보드 (Blue Seat) */
+  Ic('M102 214L216 228L276 202L164 190Z') +
+  Ic('M102 214L216 228V238L102 224Z') +
+  /* 데 스틸 직교 규격 각재 프레임 & 숨은 다우엘 목심 점선 */
+  Ic('M84 152L196 164V178L84 166Z') +
+  Im('M84 152L196 164V178L84 166Z') +
+  Ic('M186 140L292 150V162L186 152Z') +
+  Ic('M106 166H122V374H106Z') +
+  Im('M106 166H122V374H106Z') +
+  Ic('M204 176H220V376H204Z') +
+  Im('M204 176H220V376H204Z') +
+  Ic('M94 256L234 272V284L94 268Z') +
+  Ic('M106 322L246 312V324L106 334Z') +
+  SDy(1.8, 'M114 168V178M212 178V188M114 260V270M212 270V280') +
+  /* 각재 절단면 노란색 원색 단면 */
+  Iy('M84 152H90V166H84ZM190 164H196V178H190ZM106 368H122V374H106ZM204 370H220V376H204ZM286 150H292V162H286ZM94 256H100V268H94ZM228 272H234V284H228Z'),
+
+  /* 10. 체스카 B32 (1928) - 이음매 없는 캔틸레버 강관 S프레임, 강관 끝단 캡, 원목 테두리 케인 등·좌판 */
+  Ics('M232 48L286 54L276 188L222 182Z') +
+  Sc(8, 'M286 54L274 226L146 218') +
+  /* 등받이 너도밤나무 프레임 & 케인 직조 */
+  Iy('M144 46L238 56L228 192L134 182Z') +
+  '<polygon points="154,58 228,66 219,180 145,172" fill="url(#hc)"/>' +
+  Bd('M154 58L228 66L219 180L145 172Z') +
+  /* 단일 연속 강관 캔틸레버 프레임 & 바닥 미끄럼 글라이드 */
+  Sc(10, 'M258 364L114 372Q102 372 104 358L116 226Q118 214 132 215L242 226Q256 228 258 212L268 62') +
+  Sm(3.5, 'M258 364L114 372Q102 372 104 358L116 226Q118 214 132 215L242 226Q256 228 258 212L268 62') +
+  Bd('M254 362L116 370Q106 370 108 358L120 226Q122 217 134 218L240 229') +
+  /* 강관 끝단 블랙 캡 & 바닥 글라이드 */
+  Im('M254 360H264V368H254ZM264 56H272V64H264ZM144 368H164V374H144ZM204 365H224V371H204Z') +
+  /* 좌판 프레임 & 케인 직조 */
+  Iy('M114 210L234 222L282 204L164 194Z') +
+  '<polygon points="124,210 232,220 272,205 166,196" fill="url(#hc)"/>' +
+  Bd('M124 210L232 220L272 205L166 196Z'),
+
+  /* 11. 파이미오 체어 (1932) - 닫힌 자작나무 적층 썰매 루프, 두루마리 합판 시트, 상단 3개 통기 슬롯 */
+  Ics('M162 114Q246 112 272 178Q294 248 286 356L172 364Q148 310 156 130Z') +
+  /* 닫힌 자작나무 적층 썰매 루프 & 나뭇결 등고선 */
+  Sy(13, 'M118 122Q214 118 242 192Q266 266 254 370L132 374Q104 316 112 136Q113 123 118 122Z') +
+  Sm(4.5, 'M118 122Q214 118 242 192Q266 266 254 370L132 374Q104 316 112 136Q113 123 118 122Z') +
+  Bd('M120 122Q214 118 242 192Q266 266 254 370L132 374') +
+  /* 두루마리처럼 말린 일체형 성형 합판 시트 */
+  Iy('M138 66Q162 56 174 84Q154 96 154 118Q162 204 214 238Q274 266 306 256Q316 284 288 294Q268 296 268 276Q194 262 142 196Q118 136 126 84Q128 70 138 66Z') +
+  '<path d="M138 66Q162 56 174 84Q154 96 154 118Q162 204 214 238Q274 266 306 256Q316 284 288 294Q268 296 268 276Q194 262 142 196Q118 136 126 84Q128 70 138 66Z" fill="url(#hg)"/>' +
+  Bd('M142 74Q132 132 154 192Q202 252 286 268') +
+  /* 머리받침 3개 통기 슬롯(Ventilation Slots) */
+  Im('M144 74L158 70L160 75L146 79ZM142 84L156 80L158 85L144 89ZM140 94L154 90L156 95L142 99Z'),
+
+  /* 12. 이임스 LCW (1946) - 3차원 성형 합판 쉘, 구부러진 합판 척추, 숨은 고무 쇼크 마운트(점선), 벌어진 뒷다리 */
+  Ics('M244 218Q274 284 294 358L276 362Q256 292 230 226Z') +
+  Ics('M134 232Q118 294 106 358L122 360Q134 298 148 234Z') +
+  /* 등받이와 좌판을 잇는 성형 합판 척추(Spine) */
+  Im('M162 138L182 140Q178 214 216 256L198 266Q158 220 162 138Z') +
+  /* 호두나무 3차원 곡면 등받이 쉘 */
+  Iy('M118 76Q174 62 228 84Q222 128 210 156Q166 144 122 152Q112 122 118 76Z') +
+  Ims('M120 78Q174 64 226 86Q220 126 208 154Q166 142 124 150Q114 122 120 78Z') +
+  '<path d="M122 80Q174 66 224 88Q218 124 206 152Q166 140 126 148Q116 122 122 80Z" fill="url(#hg)"/>' +
+  Bd('M128 88Q174 78 216 94') +
+  /* 등받이 뒤쪽 숨은 고무 쇼크 마운트(Rubber Shock Mounts) 투시 */
+  '<circle class="sdc" cx="172" cy="116" r="9"/><circle class="sdm" cx="172" cy="116" r="4"/>' +
+  /* 호두나무 3차원 곡면 좌판 쉘 */
+  Iy('M124 212Q188 228 268 206Q284 224 270 238Q192 260 122 240Q110 226 124 212Z') +
+  Ims('M126 214Q188 230 266 208Q280 224 268 236Q192 256 124 238Q114 226 126 214Z') +
+  '<path d="M128 216Q188 232 264 210Q276 224 266 234Q192 252 126 236Q118 226 128 216Z" fill="url(#hg)"/>' +
+  Bd('M132 222Q190 236 262 218') +
+  /* 넓게 벌어진 성형 합판 다리 */
+  Iy('M146 238L168 242Q156 308 144 374H124Q136 308 146 238Z') +
+  Im('M150 239L164 242Q152 308 140 374H128Q140 308 150 239Z') +
+  Iy('M232 236L252 232Q268 302 284 375H264Q248 304 232 236Z') +
+  Im('M236 236L248 233Q264 302 280 375H268Q252 304 236 236Z'),
+
+  /* 13. 위시본 체어 CH24 (1949) - 반원형 증기 곡목 톱레일, 중앙 핑거 조인트, Y자 등살, 120m 종이끈 엔벨로프 직조 */
+  Sy(10, 'M102 162Q116 74 202 68Q284 68 286 154') +
+  Sm(3.5, 'M102 162Q116 74 202 68Q284 68 286 154') +
+  /* 상단 톱레일 정중앙 핑거 조인트(Finger Joint) 지그재그 이음선 */
+  Sc(2.2, 'M198 63L202 66L198 69L202 72') +
+  Sy(8.5, 'M132 134L122 362M266 132L274 364') +
+  /* Y자(새의 차골, Wishbone) 중앙 등받이 */
+  Iy('M194 70H208V134L228 196H214L201 150L188 196H174L194 134Z') +
+  Ims('M196 72H206V134L224 196H216L201 146L186 196H178L196 134Z') +
+  /* 120m 덴마크 종이끈 4방향 엔벨로프 직조 좌판 */
+  Iy('M114 200L246 196L282 212L144 222Z') +
+  '<polygon points="122,202 244,198 274,211 146,219" fill="url(#hp)"/>' +
+  Bd('M122 202L274 211M244 198L146 219') +
+  /* 테이퍼드 물푸레나무 원형 다리 & 측면 보강 가로대 */
+  Sy(9, 'M138 220L128 374M252 216L260 376') +
+  Sc(4.5, 'M134 274L256 270M131 312L124 304M258 310L272 302'),
+
+  /* 14. 팬톤 체어 (1960) - 이음새 없는 S자 일체형 사출 쉘, 척추 오목 곡면, U자형 베이스 림 & 하부 리브 투시 */
+  Ics('M156 54Q178 52 184 82Q192 146 172 194Q228 194 282 206Q308 216 300 258Q292 314 294 368L268 370Q268 318 274 266Q276 236 246 232Q184 226 148 258Q118 288 142 346L228 354L224 374L118 368Q86 304 116 238Q142 188 146 132Q146 82 132 58Z') +
+  Im('M132 58Q156 54 164 86Q172 152 152 200Q210 200 266 212Q292 222 284 264Q276 318 278 374L256 374Q256 322 262 270Q264 242 234 238Q170 232 134 264Q104 294 128 352L214 360L210 375L104 370Q72 306 102 240Q128 190 132 134Q132 84 118 62Z') +
+  Iys('M138 64Q154 62 160 88Q168 150 148 202Q208 204 262 216Q284 226 278 264Q270 318 272 372L260 372Q260 322 266 270Q268 238 234 234Q168 228 130 262Q98 294 124 354L210 362L208 372L108 367Q78 306 108 242Q132 192 136 134Q136 86 124 66Z') +
+  /* S자 쉘 능선 하이라이트 & 하부 응력 보강 리브 점선 */
+  Bd('M138 72Q146 144 130 204Q188 212 266 226Q276 244 268 362') +
+  SDy(2, 'M132 252Q172 220 242 228Q274 234 268 340'),
+
+  /* 15. 루이 고스트 (2002) - 투명 폴리카보네이트 단일 사출, 메달리온 이중 테두리, 사출 리브 & 뒷다리 투과 표현 */
+  /* 투명 좌판 너머로 투과되는 뒷다리와 하부 사출 리브(점선) */
+  SDc(4, 'M252 214L266 356M136 218L124 352M146 194L268 202') +
+  SDm(1.8, 'M146 214L264 222M176 210L170 232M216 212L210 234') +
+  /* 타원형 메달리온 등받이 & 이중 성형 테두리 */
+  '<ellipse class="ic-soft" cx="192" cy="112" rx="58" ry="72" transform="rotate(-5 192 112)"/>' +
+  '<ellipse class="sc" stroke-width="4.5" cx="192" cy="112" rx="58" ry="72" transform="rotate(-5 192 112)"/>' +
+  '<ellipse class="sm" stroke-width="2" opacity="0.65" cx="192" cy="112" rx="46" ry="59" transform="rotate(-5 192 112)"/>' +
+  '<ellipse class="b" cx="192" cy="112" rx="52" ry="66" transform="rotate(-5 192 112)"/>' +
+  /* 투명 폴리카보네이트 팔걸이 (적층 안착 홈 포함) */
+  Ics('M96 154Q118 142 142 156L136 202H122L126 168Q112 162 102 170L108 206H94Z') +
+  Sc(3.5, 'M96 154Q118 142 142 156M94 206L102 166') +
+  Sm(1.5, 'M100 158Q118 148 138 159') +
+  Ics('M236 162Q262 150 286 164L278 210H264L268 176Q254 170 242 178Z') +
+  Sc(3.5, 'M236 162Q262 150 286 164M286 164L278 210') +
+  /* 투명 좌판 & 내부 격자 사출 리브 투시 */
+  Ics('M94 206L238 216L282 200L280 222L236 238L92 226Z') +
+  Sc(4, 'M94 206L238 216L282 200L280 222L236 238L92 226Z') +
+  SDy(2, 'M102 218L236 228L276 212') +
+  /* 투명 테이퍼드 다리 & 내부 두께 굴절선 */
+  Ics('M96 226H114L108 374H96Z') +
+  Sc(3.2, 'M96 226H114L108 374H96Z') +
+  Sm(1.3, 'M102 232L99 368') +
+  Sy(1.3, 'M107 232L104 368') +
+  Ics('M228 238H246L240 376H228Z') +
+  Sc(3.2, 'M228 238H246L240 376H228Z') +
+  Sm(1.3, 'M234 244L231 370') +
+  Sy(1.3, 'M239 244L236 370'),
+
+  /* 16. 개개인의 의자 (지금) - 통기 메쉬 등받이, 3단 요추 지지대, T자 팔걸이, 폭포수 좌판, 가스 실린더, 5발 오성 바퀴 */
+  /* 5발 오성 베이스 & 5개의 듀얼 휠 회전 바퀴 (바닥선 y=351~376 안착) */
+  Ic('M188 318L202 342H212L196 318Z') +
+  '<circle class="im" cx="207" cy="347" r="6.5"/><circle class="iy" cx="207" cy="347" r="2.8"/>' +
+  Ic('M184 318L114 346L118 354L190 326Z') +
+  Ims('M184 318L114 346L118 354L190 326Z') +
+  '<circle class="ic" cx="111" cy="353" r="8"/><circle class="iy" cx="111" cy="353" r="3.5"/>' +
+  Ic('M198 318L266 344L262 352L192 326Z') +
+  Ims('M198 318L266 344L262 352L192 326Z') +
+  '<circle class="ic" cx="270" cy="351" r="8"/><circle class="iy" cx="270" cy="351" r="3.5"/>' +
+  /* 중앙 공압 가스 실린더 하부 슬리브 */
+  Ic('M183 268H201V324H183Z') +
+  Im('M183 268H201V324H183Z') +
+  /* 앞쪽 2발 오성 다리 & 듀얼 휠 캐스터 베어링 */
+  Ic('M186 322L126 366L134 371L194 328Z') +
+  Im('M186 322L126 366L134 371L194 328Z') +
+  '<circle class="ic" cx="123" cy="370" r="9"/><circle class="iy" cx="123" cy="370" r="4"/>' +
+  Ic('M196 322L254 366L246 371L188 328Z') +
+  Im('M196 322L254 366L246 371L188 328Z') +
+  '<circle class="ic" cx="257" cy="370" r="9"/><circle class="iy" cx="257" cy="370" r="4"/>' +
+  /* 가스 실린더 피스톤 & 주인의 체형에 맞춰 오르내리는 상부 프레임 */
+  '<g class="chair-upper">' +
+    Iy('M187 236H197V276H187Z') +
+    Ics('M187 236H197V276H187Z') +
+    /* 등받이 틸팅 그룹 */
+    '<g class="chair-back" style="transform-origin: 186px 196px">' +
+      /* 등받이 수직 척추 연결 암 */
+      Ic('M176 176L184 224H204L214 176Z') +
+      Im('M176 176L184 224H204L214 176Z') +
+      /* 탄성 폴리머 외곽 프레임 & 통기 메쉬 직조 */
+      Ic('M138 56Q194 46 248 62Q258 124 242 184Q192 174 134 182Q124 122 138 56Z') +
+      Ims('M138 56Q194 46 248 62Q258 124 242 184Q192 174 134 182Q124 122 138 56Z') +
+      '<path d="M146 66Q194 58 240 72Q248 122 234 174Q192 166 142 172Q134 122 146 66Z" fill="url(#hm)"/>' +
+      Bd('M146 66Q194 58 240 72Q248 122 234 174Q192 166 142 172Q134 122 146 66Z') +
+      /* 3단 장력 조절 요추 지지대(Lumbar Support) */
+      Iy('M135 142Q190 132 245 144L242 158Q190 146 133 156Z') +
+      Ims('M135 142Q190 132 245 144L242 158Q190 146 133 156Z') +
+      Bd('M156 147H224') +
+    '</g>' +
+    /* 뒤쪽 T자 팔걸이 */
+    Ic('M256 166H268V208H256Z') +
+    Iy('M238 156Q264 150 288 160L285 171Q262 163 236 168Z') +
+    Im('M242 159Q264 154 284 162L282 169Q262 162 240 166Z') +
+    /* 싱크로 틸트 메커니즘 박스 & 높이 조절 패들 레버 */
+    Ic('M162 230H224L218 248H168Z') +
+    Im('M162 230H224L218 248H168Z') +
+    Sc(3.5, 'M220 242L254 252') +
+    '<circle class="iy" cx="256" cy="253" r="4.5"/>' +
+    /* 엉덩이·허벅지 압력을 분산하는 폭포수 엣지(Waterfall Edge) 좌판 */
+    Iy('M102 204Q186 194 274 206Q286 220 272 232Q186 244 100 230Q88 218 102 204Z') +
+    Ims('M102 204Q186 194 274 206Q286 220 272 232Q186 244 100 230Q88 218 102 204Z') +
+    Ics('M100 222Q186 236 274 224L272 232Q186 244 100 230Z') +
+    Bd('M112 213Q186 223 262 214') +
+    /* 앞쪽 T자 조절 팔걸이 & 관절 버튼 */
+    Ic('M108 164H122V214H108Z') +
+    Im('M108 164H122V214H108Z') +
+    '<circle class="iy" cx="115" cy="184" r="3"/>' +
+    Iy('M88 154Q116 148 144 158L141 170Q116 162 86 168Z') +
+    Ics('M92 157Q116 152 140 160L138 167Q116 160 90 165Z') +
+  '</g>'
+];
+
+/* --------------------------------------------------
+   17개 의자 큐레이션 & 부위별 세밀 해부 데이터
+-------------------------------------------------- */
+const D = [
+  {
+    e: '이집트 · 신왕국', y: 'BC 1330경', n: '사자 다리 왕좌', en: 'The Lion-Legged Throne',
+    badge: '금박 왕권의 무게', mat: 'heavy-wood', feet: [-110, -76, 36, 72],
+    l: '앉는다는 것은 곧 다스린다는 뜻이었다.',
+    b: '투탕카멘의 황금 왕좌는 편히 기대기 위한 가구가 아니라 왕과 신의 경계를 긋는 건축물이었다. 판재를 겹쳐 짠 몸체 전체에 두꺼운 석고 바탕을 올리고 금박과 유리·준보석을 상감했으며, 네 발로 버틴 사자 다리는 왕권이 결코 흔들리지 않음을 과시한다.',
+    parts: [
+      { t: '등받이 · 금박 상형문 부조', d: '날개 달린 태양 원반 몰딩 아래 왕과 왕비의 의식 부조, 양옆 상형문자 카르투슈 열을 금박으로 양각했다.' },
+      { t: '팔걸이 · 우라에우스 투각', d: '양측면에 왕관을 쓴 날개 달린 코브라(우라에우스)를 투각하고, 좌판 테두리에 상아·흑단 상감 격자를 둘렀다.' },
+      { t: '다리 · 5발톱 사자 발과 받침', d: '근육이 솟은 사자 허벅지와 다섯 발톱 아래 원통형 받침대를 괴고, 다리 사이에 상·하 이집트 결속 가로대를 짰다.' }
+    ],
+    vs: '수장고 맞은편의 ‘토네트 No.14’와 달리, 이 의자는 단 한 명의 엉덩이만을 위해 존재했다.',
+    m: ['금박·준보석 상감', '우라에우스 팔걸이', '사자 발 조형']
+  },
+  {
+    e: '그리스 · 고전기', y: 'BC 5세기', n: '클리스모스', en: 'Klismos',
+    badge: '칼날처럼 휜 다리', mat: 'light-wood', feet: [-104, -58, 98, 114],
+    l: '의자가 권위에서 인간의 등 곡선으로 내려왔다.',
+    b: '바깥으로 유려하게 휘어진 사브르 다리와 등받이 기둥이 하나의 연속 곡선으로 이어진다. 금속 장식과 신화 부조를 걷어내고 오직 인간의 등뼈와 오금의 곡률만으로 비례를 잡은 최초의 일상 의자다.',
+    parts: [
+      { t: '등받이 · 반달형 곡면 판', d: '어깨뼈를 감싸 안도록 넓게 구부린 반달형 목재 판을 양쪽 기둥 상단의 노출 장부 촉(Tenon)에 끼워 고정했다.' },
+      { t: '좌판 · 사다리꼴 케인 프레임', d: '앞쪽이 넓고 뒤쪽이 좁아지는 사다리꼴 목재 틀을 장부 맞춤으로 결속하고 8각 등나무 케인을 팽팽히 엮었다.' },
+      { t: '다리 · 4개의 칼날 사브르 다리', d: '기병의 곡도(Sabre)처럼 앞뒤로 날카롭게 뻗은 네 다리가 보강 가로대 없이도 하중을 바깥쪽으로 분산시킨다.' }
+    ],
+    vs: '이집트 왕좌의 무거운 사자 발 바로 다음 시대에, 의자는 처음으로 발걸음이 가벼워졌다.',
+    m: ['곡선 목재', '사브르 다리', '인체 비례']
+  },
+  {
+    e: '로마 · 공화정', y: 'BC 1세기', n: '세라 쿠룰리스', en: 'Sella Curulis',
+    badge: '접어서 메고 다니는 권력', mat: 'ivory-x', feet: [-102, -56, 54, 92],
+    l: '등받이 없이도 정무관의 자리는 어디든 세워졌다.',
+    b: 'X자로 교차한 상아 다리를 접어 전차에 싣고 다녔던 이동식 권좌다. 기댈 등받이와 팔걸이를 의도적으로 없애 앉은 정무관이 늘 허리를 곧추세운 긴장 상태를 유지하도록 설계되었다.',
+    parts: [
+      { t: '상부 · 등받이 없는 열린 시야', d: '등받이를 과감히 생략해 광장과 법정 어느 방향에서든 시민이 정무관의 자세를 바라볼 수 있게 열었다.' },
+      { t: '좌판 · 처진 가죽 안장과 볼스터', d: 'X자 상단 가로봉 사이에 두꺼운 가죽 안장을 걸어 체중에 따라 자연스럽게 오목해지며 양끝에 둥근 롤 쿠션을 댔다.' },
+      { t: '다리 · S곡선 X프레임과 로제트', d: '역곡선(S-curve)으로 휜 상아 다리 교차점에 청동 로제트 회전 리벳을 박고 발끝에 청동 발굽 슈즈를 씌웠다.' }
+    ],
+    vs: '1,500년 뒤 조선의 ‘교의’와 같은 X자 접이식 구조를 공유하지만, 등받이를 버렸다는 점이 다르다.',
+    m: ['상아·청동 리벳', 'X자 접이식', '가죽 안장 좌판']
+  },
+  {
+    e: '중국 · 명', y: '16–17세기', n: '권의', en: 'Quanyi, 圈椅',
+    badge: '못 없는 말굽 곡선', mat: 'hardwood', feet: [-88, -64, 38, 56],
+    l: '천원지방(天圓地方)을 한 몸에 품은 짜맞춤의 정점.',
+    b: '둥근 말굽형 등받이는 하늘을, 네모난 좌판은 땅을 상징한다. 치밀하고 기름진 황화리목을 쇠못이나 아교 없이 쐐기 연귀맞춤만으로 엮어 수백 년의 건습 변화에도 뒤틀리지 않는다.',
+    parts: [
+      { t: '등받이 · 5단 연귀 말굽과 S등판', d: '다섯 조각의 곡목을 쐐기 연귀로 이어 반원형 팔걸이를 만들고, 중앙 S자 등판에 여의두문 메달리온을 투각했다.' },
+      { t: '좌판 · 연귀 프레임과 구름 보강재', d: '모서리를 45도 연귀로 맞춘 사각 틀 아래에 구름무늬 투각 보강재(Spandrels)를 끼워 측면 흔들림을 잡았다.' },
+      { t: '다리 · 앞뒤 높이가 다른 관통 가로대', d: '앞·옆·뒤 4면의 보강 가로대 높이를 계단처럼 다르게 뚫어 한 기둥에서 장부가 서로 부딪히지 않게 설계했다.' }
+    ],
+    vs: '북유럽의 한스 웨그너가 1949년 ‘위시본 체어’를 설계할 때 직접 영감을 받은 원형이다.',
+    m: ['황화리목', '5단 쐐기 연귀', '계단식 보강대']
+  },
+  {
+    e: '한국 · 조선', y: '14–19세기', n: '교의', en: 'Gyoui, 交椅',
+    badge: '온돌 위의 의례용 결계', mat: 'lacquer-x', feet: [-96, -58, 34, 62],
+    l: '좌식의 나라에서 의자는 일상이 아니라 의식이었다.',
+    b: '바닥에 앉아 생활하던 조선에서 의자는 오직 왕실의 행차와 종묘 제례에서만 펼쳐졌다. 접이식 X자 다리와 낮은 족좌대(발받침)는 땅의 기운을 딛고 엄숙한 격식을 세우는 장치다.',
+    parts: [
+      { t: '등받이 · 옻칠 말굽과 칠보문 등판', d: '붉은 주칠과 흑칠을 거듭 올린 반원형 팔걸이 중앙에 칠보문과 태극 문양을 투각한 목판 등받이를 세웠다.' },
+      { t: '좌판 · 비단 방석과 백동 두석', d: '접었을 때 가죽 끈과 비단 좌판이 함께 접히도록 유연하게 엮고, 목재 이음새마다 백동 감잡이 장석을 댔다.' },
+      { t: '다리 · 황동 경첩 X다리와 족좌대', d: '교차 축에 황동 경첩과 원형 두석을 박아 여닫히게 하고, 하단 앞쪽에 발을 올리는 낮은 족좌대를 연결했다.' }
+    ],
+    vs: '로마의 접이식 의자와 중국의 말굽 등받이가 조선의 옻칠과 백동 장석으로 결합한 독자적 형태다.',
+    m: ['주칠·흑칠 목재', '백동 감잡이 장석', '접이식 족좌대']
+  },
+  {
+    e: '영국 · 18세기', y: '1720경', n: '윈저 체어', en: 'Windsor Chair',
+    badge: '9개 살대의 장력 구조', mat: 'light-wood', feet: [-104, -92, 62, 78],
+    l: '부위마다 다른 나무를 골라 쓴 장인의 공학.',
+    b: '두꺼운 통판 좌판이 전체 구조의 주춧돌 역할을 한다. 등받이 활과 다리가 모두 좌판에 직접 꽂혀 조여지는 구조 덕분에 가벼우면서도 격렬한 사용을 견뎌낸다.',
+    parts: [
+      { t: '등받이 · 증기 곡목 활과 9개 살대', d: '탄성이 좋은 물푸레나무를 증기로 굽혀 아치형 활을 만들고, 9개의 가느다란 살대와 투각 항아리 등판을 쐐기로 박았다.' },
+      { t: '좌판 · 안장 파임 통판 느릅나무', d: '결이 엇갈려 쪼개지지 않는 느릅나무 통판을 엉덩이와 허벅지 윤곽에 맞춰 오목하게 파내어 쿠션 없이도 편안하다.' },
+      { t: '다리 · 팔자형 선반 다리와 H 보강대', d: '선반으로 깎은 너도밤나무 네 다리를 바깥쪽으로 비스듬히 꽂고 H자(Cowhorn) 가로대로 묶어 넘어짐을 막았다.' }
+    ],
+    vs: '궁정의 화려한 루이 14세 의자와 달리, 농가와 선술집에서 태어나 서민의 거실을 점령했다.',
+    m: ['3종 혼합 목재', '안장 파임 통판', 'H자 선반 다리']
+  },
+  {
+    e: '프랑스 · 바로크', y: '17세기', n: '루이 14세 팔걸이의자', en: 'Fauteuil à la Louis XIV',
+    badge: '신분과 서열의 척도', mat: 'heavy-wood', feet: [-98, -76, 38, 64],
+    l: '베르사유에서 의자의 높이와 팔걸이는 곧 계급장이었다.',
+    b: '높게 솟은 직사각 등받이와 다리 사이를 묶은 X자 보강대는 가구를 거대한 왕실 조각품으로 만들었다. 궁정 예법에서는 오직 허락된 작위만 팔걸이가 달린 ‘포퇴유(Fauteuil)’에 앉을 수 있었다.',
+    parts: [
+      { t: '등받이 · 고블랭 자카드와 황동 징', d: '금박 조각 테두리 안에 꽃무늬 고블랭 태피스트리를 팽팽히 씌우고 가장자리를 수백 개의 황동 징으로 촘촘히 박았다.' },
+      { t: '팔걸이 · 아칸서스 잎과 소용돌이', d: '팔꿈치가 닿는 끝단을 소용돌이(Volute) 형태로 말아 올리고 지지대 표면에 아칸서스 잎사귀 부조를 깊게 새겼다.' },
+      { t: '다리 · 역피라미드 기둥과 X자 살티어', d: '묵직한 4각 발루스터 다리 하단을 대각선 X자(Saltire) 곡선 보강대로 묶고 교차점 정중앙에 작은 핀이얼 조각을 얹었다.' }
+    ],
+    vs: '300여 년 뒤 필리프 스탁은 이 거대한 권위의 윤곽을 투명 플라스틱 유령으로 지워버린다.',
+    m: ['금박 조각 목재', '고블랭 태피스트리', 'X자 살티어 보강대']
+  },
+  {
+    e: '오스트리아 · 산업화', y: '1859', n: '토네트 No.14', en: 'Thonet No. 14',
+    badge: '상자 속 6개 부품의 혁명', mat: 'bentwood', feet: [-84, -74, 54, 72],
+    l: '의자가 처음으로 귀족의 살롱을 벗어나 모두의 카페로 들어왔다.',
+    b: '고온 증기로 너도밤나무 봉을 원형 틀에 감아 구부리는 기술로 단 6개의 나무 부품과 10개의 나사만으로 의자를 완성했다. 1세제곱미터 상자에 36개를 분해해 실어 전 세계 카페로 보냈다.',
+    parts: [
+      { t: '등받이 · 이중 증기 곡목 아치 루프', d: '외부 큰 원호와 내부 작은 원호 두 줄기의 곡목이 등받이에서 뒷다리까지 이음새 없이 한 번에 내려온다.' },
+      { t: '좌판 · 원형 프레임과 8각 케인 직조', d: '증기로 둥글게 말아 이은 너도밤나무 좌판 링 안에 8각 별무늬 등나무 케인을 엮어 가볍고 통기성이 뛰어나다.' },
+      { t: '다리 · 노출 볼트와 원형 링 보강대', d: '좌판 아래 4개의 다리를 철제 볼트·너트로 조이고, 다리 중간 높이에 원형 나무 링을 끼워 비틀림 강성을 확보했다.' }
+    ],
+    vs: '수장고에서 가장 가볍지만, 누적 생산량 5천만 개 이상으로 모든 왕좌를 압도한다.',
+    m: ['증기 곡목(Bentwood)', '6부품 10나사', '원형 링 보강대']
+  },
+  {
+    e: '영국 · 아르누보', y: '1902', n: '힐하우스 래더백', en: 'Hill House Ladderback',
+    badge: '141cm의 수직 건축선', mat: 'hardwood', feet: [-70, -44, 50, 72],
+    l: '앉기 위한 도구가 방의 공기를 가르는 수직 기둥이 되었다.',
+    b: '찰스 레니 매킨토시가 힐하우스의 하얀 침실 벽 앞에 세우기 위해 설계했다. 1.4미터가 넘는 사다리꼴 등받이는 실제 등을 기대기보다 공간에 그래픽적인 수직선을 긋는 건축적 오브제다.',
+    parts: [
+      { t: '등받이 · 4단 체크 격자와 7단 가로살', d: '위로 갈수록 미세하게 좁아지는 사다리꼴 두 기둥 사이에 최상단 4단 정사각 격자와 7개의 얇은 수평 가로살을 배치했다.' },
+      { t: '좌판 · 사다리꼴 프레임과 자카드 방석', d: '검게 염색한 물푸레나무 틀 위에 격자 문양 패브릭 방석을 얹어 극단적인 수직선과 단정한 수평면이 대비를 이룬다.' },
+      { t: '다리 · 가느다란 사각 기둥과 하부 단차', d: '등받이 기둥이 그대로 바닥까지 뻗어 뒷다리가 되며, 세로로 얇게 깎은 판재 보강대가 다리 하단을 단정히 묶는다.' }
+    ],
+    vs: '다른 의자들이 바닥에 넓게 퍼질 때, 혼자만 수장고 천장을 향해 가장 높이 솟아 있다.',
+    m: ['흑단색 물푸레나무', '141cm 사다리 격자', '공간 수직 분할']
+  },
+  {
+    e: '네덜란드 · 데 스틸', y: '1918', n: '레드 블루 체어', en: 'Red Blue Chair',
+    badge: '직선과 면의 입체 추상', mat: 'hardwood', feet: [-86, 12, 38],
+    l: '의자라는 덩어리를 해체해 3차원 좌표축으로 다시 조립했다.',
+    b: '헤릿 리트벨트가 규격 각재와 합판을 서로 파고들지 않고 면과 면이 맞닿게 엇갈려 쌓았다. 검은 각재의 절단된 끝단면에 칠한 노란색 사각형은 선이 공간 속으로 무한히 뻗어 나감을 암시한다.',
+    parts: [
+      { t: '등받이 · 붉은 합판과 15개 직교 각재', d: '뒤로 기울어진 붉은 직사각 등판이 가로·세로 검은 각재 프레임 위에 맞닿아 얹히며 면과 선의 독립성을 드러낸다.' },
+      { t: '좌판 · 푸른 평면과 숨은 다우엘 목심', d: '푸른색 좌판 아래의 각재들은 장부 구멍을 파는 대신 보이지 않는 다우엘 목심(점선)으로 직교 접합했다.' },
+      { t: '다리 · 12개소의 노란색 절단 단면', d: '수직·수평으로 교차하는 검은 너도밤나무 각재의 모든 끝단면을 노란색으로 칠해 X·Y·Z 3차원 좌표축을 시각화했다.' }
+    ],
+    vs: '곡선으로 몸을 감싸는 아르누보와 전통 가구에 맞서, 직각의 명료함만으로 의자를 선언했다.',
+    m: ['규격 각재·합판', '리트벨트 조인트', '삼원색 조형']
+  },
+  {
+    e: '독일 · 바우하우스', y: '1928', n: '체스카 B32', en: 'Cesca Chair',
+    badge: '뒷다리 없는 외팔보', mat: 'tubular-steel', feet: [-92, 62],
+    l: '하나의 강철 파이프가 뒷다리의 존재 이유를 지웠다.',
+    b: '마르셀 브로이어가 자전거 핸들의 이음매 없는 강관(Tubular Steel)에서 착상했다. 바닥의 썰매형 프레임에서 꺾여 올라온 강관이 앉는 사람의 하중을 탄력 있게 받아내며 공중에 뜬다.',
+    parts: [
+      { t: '등받이 · 강관 상단에서 꺾인 케인 틀', d: '등받이 뒤로 돌아나온 크롬 강관 끝에 너도밤나무 원목 프레임을 나사로 고정하고 등나무 케인을 팽팽히 엮었다.' },
+      { t: '좌판 · 공중에 뜬 외팔보 케인 시트', d: '뒷다리 지지대 없이 강관 프레임 위에만 얹힌 좌판이 앉을 때마다 미세한 스프링처럼 탄성 있게 출렁인다.' },
+      { t: '다리 · 연속 S자 크롬 강관과 글라이드', d: '직경 22mm 냉간 인발 강관을 한 줄기로 구부려 썰매형 바닥을 만들고, 긁힘 방지를 위해 하부에 플라스틱 글라이드를 끼웠다.' }
+    ],
+    vs: '고전적인 등나무(케인) 직조 좌판과 차가운 산업용 강철 파이프가 한 몸에서 충돌한다.',
+    m: ['22mm 크롬 강관', '외팔보(Cantilever)', '원목·케인 직조']
+  },
+  {
+    e: '핀란드 · 모더니즘', y: '1932', n: '파이미오 체어', en: 'Paimio Chair',
+    badge: '호흡을 여는 110도 각도', mat: 'molded-plywood', feet: [-76, 58],
+    l: '차가운 강철 대신 따뜻한 나무를 휘어 병든 몸을 안았다.',
+    b: '알바 알토가 결핵 요양원 환자들의 폐가 가장 편안히 열리도록 등받이 기울기를 계산했다. 양옆의 닫힌 적층 합판 썰매 루프 사이에 두루마리처럼 말린 한 장의 자작나무 합판이 걸려 있다.',
+    parts: [
+      { t: '등받이 · 두루마리 말림과 3개 통기 슬롯', d: '상단 머리받침을 두루마리처럼 둥글게 말아 목을 받치고, 등받이 윗부분에 땀과 열기를 빼내는 3개의 가로 슬롯을 뚫었다.' },
+      { t: '좌판 · 한 장의 연속 곡면 자작나무 쉘', d: '등받이에서 좌판, 무릎 아래 말림까지 이음새 없는 한 장의 성형 합판 시트가 탄성 띠처럼 체중을 부드럽게 받아낸다.' },
+      { t: '다리 · 닫힌 적층 자작나무 썰매 루프', d: '얇은 자작나무 무늬목 여러 겹을 압착해 닫힌 고리 모양의 양측 프레임을 만들어 휘어짐과 비틀림을 동시에 해결했다.' }
+    ],
+    vs: '바우하우스의 금속 캔틸레버에 대한 북유럽의 유기적 대답이다.',
+    m: ['자작나무 적층 합판', '3개 통기 슬롯', '닫힌 썰매 루프']
+  },
+  {
+    e: '미국 · 전후 디자인', y: '1946', n: '이임스 LCW', en: 'Eames Molded Plywood Chair',
+    badge: '부상병 부목에서 태어난 곡선', mat: 'molded-plywood', feet: [-68, -46, 72],
+    l: '전쟁의 성형 기술이 가장 친밀한 일상의 조각이 되었다.',
+    b: '찰스와 레이 이임스가 2차 세계대전 당시 부상병용 합판 다리 부목을 만들며 개발한 열압착 성형(Kazam! Machine)으로 얇은 호두나무 무늬목을 3차원 복합 곡면으로 구부렸다.',
+    parts: [
+      { t: '등받이 · 3차원 곡면 쉘과 쇼크 마운트', d: '5겹 무늬목을 가로·세로 동시에 구부린 등받이 뒷면에 굵은 고무 쇼크 마운트(점선)를 접착해 앉는 이의 움직임에 따라 휘어진다.' },
+      { t: '좌판 · 안장 굴곡 시트와 합판 척추', d: '허벅지 끝단이 자연스럽게 아래로 말린 좌판 쉘을 길고 유연한 합판 척추(Spine) 프레임으로 등받이와 연결했다.' },
+      { t: '다리 · 넓게 벌어진 성형 합판 다리', d: '좌판 하부에서 앞뒤로 넓게 벌어진 8겹 성형 합판 다리가 낮은 무게중심과 안정적인 착석감을 완성한다.' }
+    ],
+    vs: '등받이와 좌판을 고무 쇼크 마운트로 분리 연결해 앉는 사람의 움직임에 미세하게 반응한다.',
+    m: ['성형 호두나무 합판', '고무 쇼크 마운트', '합판 척추 구조']
+  },
+  {
+    e: '덴마크 · 스칸디나비아', y: '1949', n: '위시본 체어 CH24', en: 'Wishbone Chair',
+    badge: 'Y자 살대와 120m 종이끈', mat: 'light-wood', feet: [-74, -68, 64, 70],
+    l: '명나라 의자의 초상화를 북유럽의 수공예 언어로 번역하다.',
+    b: '한스 웨그너가 명나라 권의의 둥근 팔걸이를 간결하게 다듬고, 중앙 등받이를 새의 차골(Wishbone) 모양 Y자로 대체했다. 좌판은 120미터 길이의 덴마크 종이끈을 수작업으로 엮었다.',
+    parts: [
+      { t: '등받이 · 핑거 조인트 톱레일과 Y자 살대', d: '증기로 구부린 반원형 팔걸이 정중앙을 톱니형 핑거 조인트로 맞물려 잇고, Y자 등받이 판이 척추의 압력을 피해 등을 받친다.' },
+      { t: '좌판 · 120m 종이끈 엔벨로프 직조', d: '수지 코팅된 3겹 꼬임 종이끈 120미터를 네 모서리에서 대각선 편지봉투(Envelope) 패턴으로 엮어 내구성과 탄성을 모두 잡았다.' },
+      { t: '다리 · 테이퍼드 원형 다리와 장부 가로대', d: '위에서 아래로 가늘어지는 테이퍼드(Tapered) 물푸레나무 원형 다리가 시각적 경쾌함과 튼튼한 지지력을 동시에 만든다.' }
+    ],
+    vs: '수장고 안의 명나라 ‘권의’와 나란히 세우면 300년의 시차를 건넌 대화가 시작된다.',
+    m: ['핑거 조인트 곡목', 'Y자 등받이', '120m 종이끈 직조']
+  },
+  {
+    e: '덴마크 · 팝', y: '1960', n: '팬톤 체어', en: 'Panton Chair',
+    badge: '이음새 없는 S자 일체형', mat: 'plastic', feet: [-92, 68],
+    l: '다리·좌판·등받이의 경계가 녹아내린 최초의 일체형 의자.',
+    b: '베르너 팬톤이 하나의 금형에서 단번에 찍어내는 캔틸레버 플라스틱 의자를 구상했다. 소재 강도 문제를 해결해 실제 단일 사출 양산에 성공하기까지 7년이 걸렸다.',
+    parts: [
+      { t: '등받이 · 척추를 감싸는 유연한 S자 쉘', d: '등받이 상단으로 갈수록 두께를 얇게 성형해 기대었을 때 허리 움직임에 맞춰 부드럽게 뒤로 휘어진다.' },
+      { t: '좌판 · 측면 리브(Rib)와 오목한 쉘 곡면', d: '이음매 없는 곡면 가장자리를 따라 도톰한 테두리 리브를 둘러 얇은 두께로도 꺾이지 않는 구조 강성을 확보했다.' },
+      { t: '다리 · U자형 베이스 림과 하부 보강 리브', d: '바닥과 맞닿는 넓은 U자형 베이스 가장자리와 하부 내부 응력 보강 리브(점선)가 뒷다리 없이도 전복을 막아준다.' }
+    ],
+    vs: '부품 6개를 조립하던 토네트에서 시작된 대량생산의 꿈이 ‘부품 1개’로 완결된 순간이다.',
+    m: ['단일 사출 성형', '일체형 S곡선', '측면 응력 리브']
+  },
+  {
+    e: '프랑스 · 동시대', y: '2002', n: '루이 고스트', en: 'Louis Ghost',
+    badge: '투명하게 돌아온 바로크의 유령', mat: 'polycarbonate', feet: [-98, -72, 34, 62],
+    l: '과거의 권위를 지우지 않고 투명하게 비워버린 역설.',
+    b: '필리프 스탁이 루이 16세 시대의 메달리온 팔걸이의자 실루엣을 투명 폴리카보네이트 단일 사출로 복원했다. 눈에는 보이지 않는 듯 가볍지만 6개까지 겹쳐 쌓을 수 있을 만큼 단단하다.',
+    parts: [
+      { t: '등받이 · 타원형 메달리온 이중 테두리', d: '바로크 궁정 의자의 상징인 타원형 메달리온 프레임과 양각 몰딩을 투명 폴리카보네이트 금형 하나로 이음새 없이 찍어냈다.' },
+      { t: '팔걸이 · 적층(Stacking) 안착 홈과 리브', d: '양팔걸이 상단 안쪽에 위 의자의 다리가 맞물려 얹히는 미세한 단차를 두어 6개까지 수직으로 안정되게 겹쳐 쌓인다.' },
+      { t: '다리 · 투과되는 사출 리브와 테이퍼드 다리', d: '좌판 아래의 투명 사출 보강 리브(점선)와 4개의 테이퍼드 다리가 빛을 굴절시키며 뒤편의 풍경을 그대로 투과시킨다.' }
+    ],
+    vs: '수장고 첫머리의 황금 왕좌와 마주 보며, 의자의 역사가 물질에서 환영으로 변했음을 보여준다.',
+    m: ['투명 폴리카보네이트', '메달리온 패러디', '6단 적층 구조']
+  },
+  {
+    e: '오늘 · 개개인의 방', y: '지금', n: '개개인의 의자', en: 'Your Everyday Chair',
+    badge: '오직 한 사람을 위한 1mm의 조율', mat: 'swivel-mesh', feet: [-83, -69, 11, 67, 81],
+    customizable: true,
+    l: '왕좌가 한 사람의 권력을 과시했다면, 오늘의 의자는 한 사람의 척추를 받아낸다.',
+    b: '공장에서 수백만 개가 똑같이 찍혀 나오지만, 방에 놓이는 순간 비로소 세상에 단 하나뿐인 의자가 된다. 가스 실린더의 높이, 요추 지지대의 장력, 팔걸이의 각도까지 주인의 체형과 습관에 맞춰 매일 미세하게 조율된다.',
+    parts: [
+      { t: '등받이 · 엘라스토머 메쉬와 요추 지지대', d: '체열과 습기를 배출하는 직조 메쉬 등받이 뒤에 상하·장력 조절이 가능한 요추 지지대(Lumbar Support)가 척추 곡선을 받친다.' },
+      { t: '좌판 · 폭포수 엣지와 싱크로 틸트 박스', d: '무릎 뒤 혈류를 방해하지 않도록 앞끝을 둥글게 말아 내린 폭포수(Waterfall) 좌판 아래에 등·좌판 연동 틸트 메커니즘을 품었다.' },
+      { t: '다리 · 공압 가스 실린더와 5발 회전 바퀴', d: '중앙 공압 실린더가 앉는 이의 신장에 맞춰 높낮이를 조절하고, 5발 오성 베이스 끝의 듀얼 휠 캐스터가 360도 자유롭게 구른다.' }
+    ],
+    vs: '수장고 입구의 황금 왕좌와 달리 이 의자에는 정해진 주인이 없다. 지금 화면 앞에 앉아 있는 당신의 자세가 이 의자의 마지막 형태를 완성한다.',
+    m: ['탄성 메쉬·요추 지지대', '가스 실린더 조율', '5발 회전 캐스터']
+  }
+];
+
+const N = D.length;
+const st = document.getElementById('st');
+const pn = document.getElementById('pn');
+const rail = document.getElementById('rail');
+const tracksSvg = document.getElementById('tracks');
+
+/* --------------------------------------------------
+   17개 의자 레이어 생성 (본체 + 바닥 투영 그림자)
+-------------------------------------------------- */
+const L = C.map((s, idx) => {
+  const d = document.createElement('div');
+  d.className = 'layer';
+  d.dataset.idx = idx;
+  d.innerHTML = `
+    <svg class="cast" viewBox="0 0 400 400" aria-hidden="true">${s}</svg>
+    <svg viewBox="0 0 400 400" aria-hidden="true">${s}</svg>
+  `;
+  st.appendChild(d);
+  return d;
+});
+
+/* 우측 연대기 레일 버튼 생성 */
+D.forEach((d, i) => {
+  const b = document.createElement('button');
+  b.innerHTML = `<span>${d.y}</span>`;
+  b.setAttribute('aria-label', d.n);
+  b.onclick = () => {
+    z = i;
+    hideHint();
+  };
+  rail.appendChild(b);
+});
+
+let z = 0, zd = 0, dx = 0, busy = 0, cur = -1, tm, mute = 0, ac;
+let chairTune = { lift: 0, tilt: 0 };
+window.currentNightMix = 0;
+
+const cl = v => Math.max(0, Math.min(N - 1, v));
+const ez = p => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+
+function hideHint() {
+  const hint = document.getElementById('hint');
+  if (hint) hint.style.opacity = 0;
+}
+
+/* --------------------------------------------------
+   바닥 끌림 궤적 (Floor Scuff Trails — 3원색 오버프린트 자국)
+-------------------------------------------------- */
+let trackCooldown = 0;
+function leaveFloorTrack(chairIdx, fromX, toX) {
+  const now = performance.now();
+  if (now - trackCooldown < 38) return;
+  trackCooldown = now;
+
+  const chair = D[chairIdx];
+  if (!chair) return;
+
+  const isHeavy = chair.mat === 'heavy-wood' || chair.mat === 'hardwood';
+  const isSteel = chair.mat === 'tubular-steel';
+  const isCaster = chair.mat === 'swivel-mesh';
+  const strokeW = isHeavy ? 3.4 : isSteel ? 2.4 : isCaster ? 2.2 : 1.9;
+  const baseOp = isHeavy ? 0.42 : 0.32;
+  const primaryInks = ['#FFE600', '#E6007E', '#0072E3'];
+
+  chair.feet.forEach((footOffset, k) => {
+    const y = 32 + (k % 2 === 0 ? 12 : -4);
+    const x1 = fromX + footOffset;
+    const x2 = toX + footOffset;
+    if (Math.abs(x2 - x1) < 2) return;
+
+    const inkColor = primaryInks[(chairIdx + k) % 3];
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x1.toFixed(1));
+    line.setAttribute('y1', y);
+    line.setAttribute('x2', x2.toFixed(1));
+    line.setAttribute('y2', y);
+    line.setAttribute('stroke', inkColor);
+    line.setAttribute('stroke-width', strokeW);
+    line.setAttribute('stroke-linecap', 'round');
+    if (isSteel) line.setAttribute('stroke-dasharray', '10 3');
+    else if (isCaster) line.setAttribute('stroke-dasharray', '16 2');
+    line.style.opacity = baseOp;
+    line.style.transition = 'opacity 11s ease-out';
+
+    tracksSvg.appendChild(line);
+    requestAnimationFrame(() => {
+      line.style.opacity = '0';
+    });
+    setTimeout(() => line.remove(), 11200);
+  });
+}
+
+/* --------------------------------------------------
+   17번째 개개인의 의자 실시간 자세 조율 반영
+-------------------------------------------------- */
+function applyChairTune() {
+  const personalLayer = L[N - 1];
+  if (!personalLayer) return;
+  personalLayer.querySelectorAll('.chair-upper').forEach(g => {
+    g.style.transform = `translateY(${chairTune.lift}px)`;
+  });
+  personalLayer.querySelectorAll('.chair-back').forEach(g => {
+    g.style.transform = `rotate(${chairTune.tilt}deg)`;
+  });
+}
+
+/* --------------------------------------------------
+   정보 카드 업데이트 (부위별 세밀 해부 묘사 + 수장고 대비 시선)
+-------------------------------------------------- */
+function info(i) {
+  const d = D[i];
+  pn.classList.add('o');
+  setTimeout(() => {
+    const partsHtml = d.parts ? `
+      <div class="anatomy">
+        ${d.parts.map(p => `
+          <div class="part">
+            <strong>${p.t}</strong>
+            <span>${p.d}</span>
+          </div>
+        `).join('')}
+      </div>
+    ` : '';
+
+    const tunerHtml = d.customizable ? `
+      <div class="tuner-box" onpointerdown="event.stopPropagation()">
+        <label>좌판 높이 <input id="tune-lift" type="range" min="-16" max="14" value="${chairTune.lift}"></label>
+        <label>등받이 틸트 <input id="tune-tilt" type="range" min="-6" max="16" value="${chairTune.tilt}"></label>
+        <button type="button" id="tune-reset">기본 자세</button>
+      </div>
+    ` : '';
+
+    pn.innerHTML = `
+      <div class="top-meta">
+        <span class="k">${d.e}</span>
+        <span class="pattern-badge">${d.badge}</span>
+      </div>
+      <div class="y">${d.y}</div>
+      <div class="title-block">
+        <h2>${d.n}</h2>
+        <div class="en">${d.en}</div>
+      </div>
+      <p class="l">${d.l}</p>
+      <p class="b">${d.b}</p>
+      ${partsHtml}
+      ${tunerHtml}
+      <div class="vs"><strong>수장고의 시선 ·</strong> ${d.vs}</div>
+      <div class="m">${d.m.map(x => `<span>${x}</span>`).join('')}</div>
+    `;
+
+    if (d.customizable) {
+      const liftEl = document.getElementById('tune-lift');
+      const tiltEl = document.getElementById('tune-tilt');
+      const resetEl = document.getElementById('tune-reset');
+      liftEl.oninput = e => {
+        chairTune.lift = Number(e.target.value);
+        applyChairTune();
+      };
+      tiltEl.oninput = e => {
+        chairTune.tilt = Number(e.target.value);
+        applyChairTune();
+      };
+      resetEl.onclick = () => {
+        chairTune = { lift: 0, tilt: 0 };
+        liftEl.value = 0;
+        tiltEl.value = 0;
+        applyChairTune();
+        snd(i);
+      };
+    }
+
+    pn.classList.remove('o');
+  }, 220);
+
+  [...rail.children].forEach((b, k) => b.classList.toggle('on', k === i));
+}
+
+/* --------------------------------------------------
+   수장고 배경 팔레트 보간 (3원색 오버프린트가 선명히 살아나는 밝은 한지·아카이브 톤)
+-------------------------------------------------- */
+const PAL_DAY = [
+  [244, 237, 222],
+  [236, 241, 246],
+  [246, 236, 240]
+];
+const PAL_NIGHT = [
+  [22, 19, 28],
+  [18, 22, 32],
+  [26, 18, 28]
+];
+
+function col(zVal) {
+  const i = Math.floor(zVal), t = zVal - i, u = t * t * (3 - 2 * t);
+  const night = window.currentNightMix || 0;
+  const aDay = PAL_DAY[i % 3], bDay = PAL_DAY[(i + 1) % 3];
+  const aNgt = PAL_NIGHT[i % 3], bNgt = PAL_NIGHT[(i + 1) % 3];
+
+  const bg = [0, 1, 2].map(k => {
+    const dVal = aDay[k] + (bDay[k] - aDay[k]) * u;
+    const nVal = aNgt[k] + (bNgt[k] - aNgt[k]) * u;
+    return Math.round(dVal + (nVal - dVal) * night);
+  });
+
+  const ink = night > 0.5 ? '238,230,214' : '29,26,22';
+  const r = document.documentElement.style;
+  r.setProperty('--color-bg', `rgb(${bg[0]},${bg[1]},${bg[2]})`);
+  r.setProperty('--color-ink', `rgb(${ink})`);
+  r.setProperty('--color-mut', `rgba(${ink},0.68)`);
+  r.setProperty('--ink-blend', night > 0.5 ? 'screen' : 'multiply');
+}
+
+/* --------------------------------------------------
+   폐관 후의 수장고 무대 렌더링 (한 방에 함께 서 있는 원근 살롱)
+-------------------------------------------------- */
+function draw() {
+  if (!busy) zd += (z - zd) * 0.14;
+
+  const isMobile = innerWidth <= 767;
+  const spreadFactor = isMobile ? 115 : 240;
+
+  L.forEach((el, i) => {
+    const d = zd - i;
+    let s, o, tx, ty, depthBlur;
+
+    if (d <= 0) {
+      s = Math.pow(2.25, d);
+      const side = Math.sin(i * 2.35);
+      const dist = Math.min(1, Math.abs(d));
+      tx = side * dist * spreadFactor;
+      ty = d * (isMobile ? 16 : 26);
+      depthBlur = Math.min(3.5, Math.abs(d) * 1.45);
+
+      if (d < -3.2) o = 0;
+      else if (d < -2.4) o = (d + 3.2) / 0.8 * 0.45;
+      else o = Math.max(0.28, 1 + d * 0.28);
+    } else {
+      s = Math.pow(3.0, d);
+      const side = Math.sin(i * 2.35) || 1;
+      tx = side * d * (spreadFactor * 1.15);
+      ty = d * 24;
+      depthBlur = d * 2.2;
+      o = d > 1.25 ? 0 : 1 - (d / 1.25);
+    }
+
+    const focusWeight = Math.max(0, 1 - Math.abs(d) * 1.6);
+    const dragOffset = dx * (0.12 + 0.88 * focusWeight);
+
+    el.style.opacity = o.toFixed(3);
+    el.style.visibility = o > 0.01 ? 'visible' : 'hidden';
+    el.style.zIndex = Math.round(50 - Math.abs(d) * 10);
+    el.style.setProperty('--depth-blur', `${depthBlur.toFixed(2)}px`);
+    el.style.transform = `translate3d(${(tx + dragOffset).toFixed(1)}px, ${ty.toFixed(1)}px, 0) scale(${s.toFixed(4)})`;
+  });
+
+  col(zd);
+
+  const i = Math.round(zd);
+  if (i !== cur && i >= 0 && i < N) {
+    cur = i;
+    info(i);
+  }
+  requestAnimationFrame(draw);
+}
+
+/* --------------------------------------------------
+   의자 재질·무게별 바닥 끌림 마찰음 (Web Audio API)
+-------------------------------------------------- */
+function snd(idx = Math.round(z)) {
+  if (mute) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+
+    const chair = D[idx] || D[0];
+    const mat = chair.mat;
+
+    const profile = {
+      'heavy-wood':     { f1: 190, f2: 340, q: 3.2, lfo: 18, thud1: 82,  thud2: 26, dur: 0.72 },
+      'hardwood':       { f1: 260, f2: 490, q: 4.0, lfo: 22, thud1: 105, thud2: 34, dur: 0.65 },
+      'lacquer-x':      { f1: 310, f2: 580, q: 4.5, lfo: 25, thud1: 118, thud2: 38, dur: 0.62 },
+      'ivory-x':        { f1: 380, f2: 720, q: 5.0, lfo: 28, thud1: 135, thud2: 44, dur: 0.58 },
+      'light-wood':     { f1: 340, f2: 660, q: 4.2, lfo: 26, thud1: 130, thud2: 42, dur: 0.58 },
+      'bentwood':       { f1: 420, f2: 820, q: 4.8, lfo: 30, thud1: 150, thud2: 48, dur: 0.54 },
+      'molded-plywood': { f1: 360, f2: 740, q: 4.4, lfo: 24, thud1: 128, thud2: 40, dur: 0.60 },
+      'tubular-steel':  { f1: 880, f2: 1620, q: 7.5, lfo: 34, thud1: 210, thud2: 68, dur: 0.56 },
+      'plastic':        { f1: 620, f2: 1120, q: 5.5, lfo: 20, thud1: 175, thud2: 56, dur: 0.52 },
+      'polycarbonate':  { f1: 740, f2: 1340, q: 6.2, lfo: 22, thud1: 195, thud2: 64, dur: 0.50 },
+      'swivel-mesh':    { f1: 520, f2: 960,  q: 5.8, lfo: 38, thud1: 165, thud2: 48, dur: 0.54 }
+    }[mat] || { f1: 320, f2: 780, q: 4.2, lfo: 26, thud1: 110, thud2: 35, dur: 0.65 };
+
+    const t = ac.currentTime;
+    const dur = profile.dur;
+    const sampleRate = ac.sampleRate;
+    const bufferSize = Math.floor(sampleRate * dur);
+    const buffer = ac.createBuffer(1, bufferSize, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
+    }
+
+    const noise = ac.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = ac.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(profile.f1, t);
+    filter.frequency.linearRampToValueAtTime(profile.f2, t + dur * 0.35);
+    filter.frequency.linearRampToValueAtTime(profile.f1 * 1.15, t + dur);
+    filter.Q.setValueAtTime(profile.q, t);
+
+    const lfo = ac.createOscillator();
+    lfo.type = 'sawtooth';
+    lfo.frequency.setValueAtTime(profile.lfo, t);
+    lfo.frequency.linearRampToValueAtTime(profile.lfo * 0.55, t + dur);
+
+    const lfoGain = ac.createGain();
+    lfoGain.gain.setValueAtTime(0.42, t);
+
+    const mainGain = ac.createGain();
+    mainGain.gain.setValueAtTime(0.01, t);
+    mainGain.gain.linearRampToValueAtTime(0.68, t + 0.07);
+    mainGain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    noise.connect(filter);
+    filter.connect(mainGain);
+    lfo.connect(lfoGain);
+    lfoGain.connect(mainGain.gain);
+    mainGain.connect(ac.destination);
+
+    noise.start(t);
+    lfo.start(t);
+    noise.stop(t + dur);
+    lfo.stop(t + dur);
+
+    const thud = ac.createOscillator();
+    const thudGain = ac.createGain();
+    thud.type = 'triangle';
+    thud.frequency.setValueAtTime(profile.thud1, t + dur - 0.08);
+    thud.frequency.exponentialRampToValueAtTime(profile.thud2, t + dur + 0.12);
+
+    thudGain.gain.setValueAtTime(0, t + dur - 0.08);
+    thudGain.gain.linearRampToValueAtTime(0.45, t + dur - 0.02);
+    thudGain.gain.exponentialRampToValueAtTime(0.001, t + dur + 0.15);
+
+    thud.connect(thudGain);
+    thudGain.connect(ac.destination);
+    thud.start(t + dur - 0.08);
+    thud.stop(t + dur + 0.15);
+  } catch (e) {}
+}
+
+/* --------------------------------------------------
+   좌우 슬라이드 (의자 끌기 + 바닥 궤적 남기기)
+-------------------------------------------------- */
+function slide(dir) {
+  hideHint();
+  const currentIdx = Math.round(z);
+  const nextIdx = currentIdx + dir;
+  if (busy || nextIdx < 0 || nextIdx >= N) return;
+
+  busy = 1;
+  snd(currentIdx);
+  const W = innerWidth, t0 = performance.now();
+  let sw = 0, prevDx = dx;
+
+  (function f(now) {
+    const p = Math.min(1, (now - t0) / 860);
+    if (p < 0.5) {
+      dx = -dir * ez(p * 2) * W * 0.85;
+      leaveFloorTrack(currentIdx, prevDx * 0.5, dx * 0.5);
+    } else {
+      if (!sw) {
+        z = zd = nextIdx;
+        sw = 1;
+        prevDx = dir * W * 0.85;
+      }
+      dx = dir * (1 - ez((p - 0.5) * 2)) * W * 0.85;
+      leaveFloorTrack(nextIdx, prevDx * 0.5, dx * 0.5);
+    }
+    prevDx = dx;
+
+    if (p < 1) requestAnimationFrame(f);
+    else {
+      dx = 0;
+      busy = 0;
+    }
+  })(t0);
+}
+
+function snap() {
+  clearTimeout(tm);
+  tm = setTimeout(() => {
+    z = Math.round(z);
+  }, 220);
+}
+
+addEventListener('wheel', e => {
+  e.preventDefault();
+  hideHint();
+  if (busy) return;
+  if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+    if (Math.abs(e.deltaX) > 28) slide(e.deltaX > 0 ? 1 : -1);
+    return;
+  }
+  z = cl(z + e.deltaY * 0.0014);
+  snap();
+}, { passive: false });
+
+let p0 = null, z0 = 0, ax = '', lastDragX = 0;
+st.addEventListener('pointerdown', e => {
+  p0 = [e.clientX, e.clientY];
+  z0 = z;
+  ax = '';
+  lastDragX = 0;
+  st.setPointerCapture(e.pointerId);
+});
+
+st.addEventListener('pointermove', e => {
+  if (!p0 || busy) return;
+  const x = e.clientX - p0[0], y = e.clientY - p0[1];
+  if (!ax && Math.hypot(x, y) > 10) ax = Math.abs(x) > Math.abs(y) ? 'h' : 'v';
+
+  if (ax === 'v') {
+    hideHint();
+    z = cl(z0 - y / (innerHeight * 0.45));
+  } else if (ax === 'h') {
+    hideHint();
+    dx = x * 0.45;
+    leaveFloorTrack(Math.round(z), lastDragX, dx);
+    lastDragX = dx;
+  }
+});
+
+st.addEventListener('pointerup', e => {
+  if (!p0) return;
+  const x = e.clientX - p0[0];
+  if (ax === 'h') {
+    if (Math.abs(x) > 55) {
+      slide(x < 0 ? 1 : -1);
+    } else {
+      dx = 0;
+    }
+  } else if (ax === 'v') {
+    snap();
+  }
+  p0 = null;
+});
+
+st.addEventListener('pointercancel', () => {
+  p0 = null;
+  if (!busy) dx = 0;
+});
+
+addEventListener('keydown', e => {
+  const k = e.key;
+  if (k === 'ArrowRight') slide(1);
+  else if (k === 'ArrowLeft') slide(-1);
+  else if (k === 'ArrowDown' || k === '+') { hideHint(); z = cl(Math.round(z) + 1); }
+  else if (k === 'ArrowUp' || k === '-') { hideHint(); z = cl(Math.round(z) - 1); }
+});
+
+document.getElementById('snd').onclick = function () {
+  mute = !mute;
+  this.textContent = mute ? '소리 꺼짐' : '소리 켜짐';
+};
+
+const gridOverlay = document.getElementById('grid-overlay');
+document.getElementById('grid-btn').onclick = function () {
+  gridOverlay.classList.toggle('active');
+};
+
+/* --------------------------------------------------
+   시간대별 수장고 역광 (Time-of-day Backlight + 조명 프리셋 순환)
+-------------------------------------------------- */
+(() => {
+  document.body.insertAdjacentHTML('afterbegin', '<div id="bloom"></div>');
+  document.body.insertAdjacentHTML('beforeend', '<div id="shaft"></div>');
+  const bloom = document.getElementById('bloom');
+  const shaft = document.getElementById('shaft');
+  const root = document.documentElement.style;
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const sm = (a, b, x) => {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  };
+
+  const LIGHT = [
+    [0, 120, 150, 255], [5, 140, 170, 255], [6, 255, 190, 140], [7.5, 255, 222, 170],
+    [10, 255, 246, 228], [13, 255, 255, 255], [16, 255, 226, 160], [17.5, 255, 170, 90],
+    [18.5, 255, 120, 90], [19.5, 200, 110, 200], [21, 120, 150, 255], [24, 120, 150, 255]
+  ];
+
+  function light(h) {
+    for (let i = 0; i < LIGHT.length - 1; i++) {
+      const a = LIGHT[i], b = LIGHT[i + 1];
+      if (h >= a[0] && h <= b[0]) {
+        const t = (h - a[0]) / (b[0] - a[0]);
+        return [1, 2, 3].map(k => Math.round(lerp(a[k], b[k], t))).join(',');
+      }
+    }
+    return '255,255,255';
+  }
+
+  const PRESETS = [
+    { label: '조명: 현재시각', h: null },
+    { label: '조명: 새벽 창빛', h: 6.3 },
+    { label: '조명: 정오 채광', h: 12.5 },
+    { label: '조명: 해질녘 역광', h: 17.6 },
+    { label: '조명: 심야 달빛', h: 22.5 }
+  ];
+  let presetIdx = 0;
+
+  function hourNow() {
+    if (PRESETS[presetIdx].h !== null) return PRESETS[presetIdx].h;
+    const m = location.hash.match(/[#&]h=(\d+(?:\.\d+)?)/);
+    if (m) return Math.min(24, +m[1]);
+    const d = new Date();
+    return d.getHours() + d.getMinutes() / 60;
+  }
+
+  let castOp = 0.4;
+
+  function applyLight() {
+    const h = hourNow();
+    const t = (h - 6) / 12;
+    const k = Math.max(0, Math.sin(Math.PI * t));
+    const w = sm(0, 0.3, k);
+    const wb = sm(0, 0.06, k);
+    const X = lerp(0.6, -Math.cos(Math.PI * t), w);
+    const sun = -X;
+    const len = lerp(2.4, Math.min(4.5, 1 / Math.max(k, 0.22)), w);
+    const back = lerp(0.3, Math.pow(1 - k, 1.6), wb);
+    const sil = sm(0.62, 0.95, back) * wb;
+    const beam = sm(0.45, 0.9, back) * sm(0, 0.08, k);
+    const L = light(h);
+    const rgba = a => `rgba(${L},${a.toFixed(3)})`;
+
+    window.currentNightMix = 1 - w;
+    root.setProperty('--sil', sil.toFixed(3));
+    root.setProperty('--rim-solid', L);
+    root.setProperty('--rim-x', `${(sun * (1.2 + 2.6 * back)).toFixed(2)}px`);
+    root.setProperty('--rim-y', `${(-0.4 - 1.4 * back).toFixed(2)}px`);
+    root.setProperty('--rim-c', rgba(0.08 + 0.84 * back));
+    root.setProperty('--rim-glow', `${(3 + 14 * back).toFixed(1)}px`);
+    root.setProperty('--rim-glow-c', rgba(0.12 + 0.5 * back));
+    root.setProperty('--melt', `${(0.8 * sm(0.5, 0.95, back) * wb).toFixed(2)}px`);
+
+    const a = back * 0.9;
+    root.setProperty('--halo', `0 0 2px ${rgba(a)}, 0 0 10px ${rgba(a * 0.75)}, 0 0 26px ${rgba(a * 0.55)}`);
+
+    const card = e => {
+      const rx = (-sun * (1.5 + 2 * back)).toFixed(2);
+      const ry = (1 + 1.5 * back).toFixed(2);
+      return `inset ${rx}px ${ry}px 0 0 ${rgba(0.1 + 0.75 * back)}, ` +
+             `inset 0 0 ${(10 + 12 * sil).toFixed(0)}px ${rgba(0.05 + 0.3 * sil)}, ` +
+             `0 0 ${(e * (1 + 3 * back)).toFixed(0)}px ${rgba(0.06 + 0.5 * back * (0.6 + 0.4 * sil))}`;
+    };
+    root.setProperty('--shadow-card', card(5));
+
+    const sx = 50 + sun * 40, sy = 78 - k * 58;
+    const r = 34 + 42 * (1 - k) * wb + 10 * (1 - wb);
+    const ba = lerp(0.12, 0.12 + 0.36 * back, wb);
+    bloom.style.background = `radial-gradient(circle at ${sx.toFixed(1)}% ${sy.toFixed(1)}%, ` +
+      `${rgba(ba)} 0%, ${rgba(ba * 0.55)} ${(r * 0.35).toFixed(0)}vmax, ${rgba(0)} ${r.toFixed(0)}vmax)`;
+
+    const ang = 90 + 40 * sun, pos = 50 + sun * 14;
+    shaft.style.background = `linear-gradient(${ang.toFixed(0)}deg, ${rgba(0)} ${pos - 24}%, ` +
+      `${rgba(0.45 * beam)} ${pos - 5}%, ${rgba(0.75 * beam)} ${pos}%, ${rgba(0.3 * beam)} ${pos + 6}%, ` +
+      `${rgba(0)} ${pos + 14}%, ${rgba(0.18 * beam)} ${pos + 24}%, ${rgba(0)} ${pos + 30}%)`;
+    const mk = 'linear-gradient(to bottom, #000 0%, rgba(0,0,0,.25) 70%, transparent 100%)';
+    shaft.style.webkitMaskImage = mk;
+    shaft.style.maskImage = mk;
+
+    const lean = Math.max(-55, Math.min(55, Math.atan(X * (len - 0.5) * 0.3) * 180 / Math.PI));
+    const blur = lerp(8, 1 + (1 - k) * 6, w);
+    root.setProperty('--cast-skew', `${lean.toFixed(1)}deg`);
+    root.setProperty('--cast-sy', (-(0.16 + (len - 1) * 0.15)).toFixed(3));
+    root.setProperty('--cast-blur', `${(blur * 0.7).toFixed(1)}px`);
+    castOp = lerp(0.14, 0.34 + 0.16 * Math.sqrt(k), w);
+  }
+
+  document.getElementById('light-btn').onclick = function () {
+    presetIdx = (presetIdx + 1) % PRESETS.length;
+    this.textContent = PRESETS[presetIdx].label;
+    applyLight();
+  };
+
+  (function loop() {
+    L.forEach((el, i) => {
+      const o = Math.max(0, 1 - Math.abs(zd - i) * 1.45);
+      el.firstElementChild.style.opacity = (o * castOp).toFixed(3);
+    });
+    requestAnimationFrame(loop);
+  })();
+
+  applyLight();
+  setInterval(applyLight, 60000);
+  addEventListener('hashchange', applyLight);
+})();
+
+draw();
+</script>
+</body>
+</html>
